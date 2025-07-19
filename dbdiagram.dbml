@@ -18,7 +18,9 @@ Table People_History {
   Alive boolean [default:true]
   IdScan varchar(255) [note:'link to the image of the Id']
   FaceEncodings VECTOR [note:'for face recognition']
-  
+  SCRequestLetter int [ref: > Correspondence.CorrespondenceId, note:'The letter the sc request was made']
+  ResponseLetter int [ref: > Correspondence.CorrespondenceId, note:'The number that we mentioned to respond on the Person with the Approval']
+
   // --- Version Control Columns ---
   StartDate datetime [not null, note: 'The date this version of the information became effective.']
   EndDate datetime [note: 'NULL means this is the current, active version.']
@@ -66,7 +68,7 @@ Table Companies {
 Table Correspondence {
   CorrespondenceId int [pk, increment]
   ParentCorrespondenceId int [ref: > Correspondence.CorrespondenceId]
-  ReferenceNumber int 
+  ReferenceNumber varchar(255) 
   CorrespondenceDate date
   Type int [ref: > CorrespondenceTypes.CorrespondenceTypeId]
   Subject varchar(255)
