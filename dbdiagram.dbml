@@ -1,0 +1,158 @@
+// ______________________________________ PEOPLE ______________________________________
+Table People_History {
+  note:'''
+    - This table is used for storing the people's information regardless they are family member or worker
+  '''
+  PersonRecordID int [pk, increment, note: 'Primary key for this specific historical record.']
+  PersonGUID uuid [not null, note: 'The permanent, unchanging ID for an individual. Links all their records together.']
+
+  // Personal details that can change over time
+  FullNameArabic nvarchar(255) [not null]
+  FullNameEnglish varchar(255)
+  Nationality varchar(50)
+  NationalID varchar(50)
+  AccessAreas varchar(50)
+  DateOfBirth date
+  Qualification varchar(50)
+  IdAddress varchar(255)
+  Alive boolean [default:true]
+  IdScan varchar(255) [note:'link to the image of the Id']
+  FaceEncodings VECTOR [note:'for face recognition']
+  
+  // --- Version Control Columns ---
+  StartDate datetime [not null, note: 'The date this version of the information became effective.']
+  EndDate datetime [note: 'NULL means this is the current, active version.']
+  IsCurrent boolean [not null, default: true, note: 'Flag to easily find the current version.']
+  Version int [not null, note: 'Version number for this person\'s personal data history.']
+}
+Table Employment_History {
+  EmploymentRecordID int [pk, increment]
+  PersonGUID uuid [not null, ref: > People_History.PersonGUID, note: 'Links this job record back to the person in People_History.']
+  CompanyID int [not null, ref: > Companies.CompanyID]
+
+  // Job-specific details
+  JobTitle varchar(100)
+  StillHired boolean [default: true]
+
+  // Version Control Columns
+  StartDate datetime [not null, note: 'When this job record became active.']
+  EndDate datetime [note: 'Null means this is the current job record.']
+  IsCurrent boolean [not null, default: true, note: 'Flag for the current job.']
+  Version int [not null, note: 'Version number for this person\'s employment history.']
+}
+Table FamilyRelationships {
+  RelationshipID int [pk, increment]
+  WorkerPersonGUID uuid [not null, ref: > People_History.PersonGUID, note: 'The GUID of the person who is the employee.']
+  FamilyMemberPersonGUID uuid [not null, ref: > People_History.PersonGUID, note: 'The GUID of the person who is the family member.']
+  RelationshipType varchar [not null, note: 'e.g., Spouse, Son, Daughter']
+  Status varchar [not null, default: 'Active', note: 'e.g., Active, Left, Deceased']
+  ProofDocumentURL varchar [note: 'Link to the scanned proof document.']
+}
+// _______________________________________________________________________________________________
+// |
+// |
+// |
+//______________________________________ Companies ______________________________________
+Table Companies {
+  CompanyID int [pk, increment]
+  CompanyName varchar(255) [not null, unique]
+  ContactInfo varchar(255)
+}
+//___________________________________________________________________________________________
+// |
+// |
+// |
+//______________________________________ CORRESPONDENCE _____________________________________
+Table Correspondence {
+  CorrespondenceId int [pk, increment]
+  ParentCorrespondenceId int [ref: > Correspondence.CorrespondenceId]
+  ReferenceNumber int 
+  CorrespondenceDate date
+  Type int [ref: > CorrespondenceTypes.CorrespondenceTypeId]
+  Subject varchar(255)
+  Direction varchar(255) [note:'the flow of the correspondence, Incoming, Outgoing and Internal']
+  Priority enum("high", 'normal', 'low')
+  Summary varchar(1000)
+}
+Table CorrespondenceContacts{
+  ContactId int [ref: > Contacts.ContactId]
+  CorrespondenceId int [ref: > Correspondence.CorrespondenceId]
+  Role enum('Sender','Resipient','CC','BCC')
+
+  indexes {
+    (CorrespondenceId, ContactId, Role) [pk]
+  }
+} 
+Table Attachments { 
+  AttachmentId int [pk, increment]
+  CorrespondenceId int [ref: > Correspondence.CorrespondenceId]
+  FileName varchar(255) [not null]
+  FilePath varchar(1024) [not null]
+  FileType varchar(100) [note:'mime type']
+  FileSize bigint
+}
+Table CorrespondenceTypes { 
+  CorrespondenceTypeId int [pk, increment]
+  TypeName varchar(255)
+}
+Table Contacts {
+  ContactId int [pk, increment]
+  Name varchar(255)
+}
+Table CorrespondenceProcedures {
+  ProcedureId int [pk, increment]
+  ResponsiblePerson int [not null, ref: > Users.userId]
+  LetterId int [not null, ref: > Correspondence.CorrespondenceId] // Foreign key to Letters table
+  ProcedureDate date [not null]
+  Description varchar(2000) [not null]
+  Status varchar(50) // e.g., 'Pending', 'In Progress', 'Completed'
+  Notes varchar(1000)
+}
+Table Users { 
+  userId int [pk, increment]
+  username varchar(200)
+  password varchar(200)
+}
+//___________________________________________________________________________________________
+// |
+// |
+// |
+// ______________________________________ Approval ___________________________________________
+Table Permits {
+  PermitID int [pk, increment]
+  PermitHolderType enum('Person', 'Company') [not null, note: 'Specifies if the permit is for a person or a company.']
+  PersonGUID uuid [ref: > People_History.PersonGUID, note:'FK to People_History. Filled if PermitHolderType is Person.']
+  CompanyID int [ref: > Companies.CompanyID, note:'FK to Companies. Filled if PermitHolderType is Company.']
+  
+  PermitStatus enum('Pending', 'Active', 'Rejected', 'Expired', 'Revoked') [not null, default: 'Pending', note: 'Overall status derived from the ApprovalDecisions.']
+  EffectiveDate date [note: 'When the permit becomes active.']
+  ExpiryDate date [note: 'When the permit expires.']
+  
+  note: 'A single permit request for an entity (person or company) to gain site access.'
+}
+
+Table Approvers {
+  ApproverID int [pk, increment]
+  ApproverName varchar(255) [not null, unique, note: 'The name of the approving organization, e.g., "Internal Security Dept", "National Safety Authority".']
+  Description varchar(500)
+}
+
+Table ApprovalDecisions {
+  ApprovalDecisionID int [pk, increment]
+  PermitID int [not null, ref: > Permits.PermitID]
+  ApproverID int [not null, ref: > Approvers.ApproverID]
+  
+  DecisionStatus enum('Pending', 'Approved', 'Rejected') [not null, default: 'Pending']
+  DecisionDate datetime
+  CorrespondenceId int [ref: > Correspondence.CorrespondenceId, note: 'Link to the formal letter of approval/rejection. NULL if the decision was verbal.']
+  Notes varchar(1000) [note: 'Required for verbal approvals to document who gave it and when. Also for any other context.']
+  
+  indexes {
+    (PermitID, ApproverID) [unique]
+  }
+  
+  note: 'Records a specific decision from one Approver regarding a Permit request.'
+}
+//___________________________________________________________________________________________
+
+
