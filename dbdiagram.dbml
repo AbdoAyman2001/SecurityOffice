@@ -135,12 +135,6 @@ Table Permits {
   note: 'A single permit request for an entity (person or company) to gain site access.'
 }
 
-Table Approvers {
-  ApproverID int [pk, increment]
-  ApproverName varchar(255) [not null, unique, note: 'The name of the approving organization, e.g., "Internal Security Dept", "National Safety Authority".']
-  Description varchar(500)
-}
-
 Table ApprovalDecisions {
   ApprovalDecisionID int [pk, increment]
   PermitID int [not null, ref: > Permits.PermitID]
@@ -155,6 +149,91 @@ Table ApprovalDecisions {
     (PermitID, ApproverContactId) [unique] // Changed from ApproverID
   }
 }
-//___________________________________________________________________________________________
+// ___________________________________________________________________________________________
+// |
+// |
+// |
+// ______________________________________ Accidents ___________________________________________
+Table Accidents { 
+  AccidentId int [pk, increment]
+  Description varchar(4096)
+  PersonGUID uuid [ref: > People_History.PersonGUID, note:'FK to People_History. Filled if PermitHolderType is Person.']
+  Address varchar(1024)  
+  Date date 
+}
+// ___________________________________________________________________________________________
+// |
+// |
+// |
+// ______________________________________ Relocation _________________________________________
+Table Relocation { 
+  RelocationId int [pk, increment]
+  RelocationLetter int [ref: > Correspondence.CorrespondenceId]
+  PersonGUID uuid [ref: > People_History.PersonGUID, note:'FK to People_History. Filled if PermitHolderType is Person.']
+  ApprovalStatus enum("انتظار","حاصل")
+  BuildingNumber int
+  BuildingLetter enum("A","B","C","D")
+  FlatNumber int
+}
+Table RelocationPeriod { 
+  RelocationPeriodId int [pk, increment]
+  RelocationId int [ref: > Relocation.RelocationId]
+  StartDate date 
+  EndDate date
+}
+// ___________________________________________________________________________________________
+// |
+// |
+// |
+// ______________________________________ Cars _________________________________________
+Table Vehicle { 
+  VehicleId int [increment]
+  Organization enum("Owner","Contractor")
+  CorrespondenceId int [ref: > Correspondence.CorrespondenceId]
+  PlateNumber varchar(10)
+  StartDate date
+  EndDate date
+  Company int [ref: > Companies.CompanyID]
+  indexes {
+    (VehicleId,Organization) [pk]
+  }
+}
+Table CarPermit { 
+  CarPermitId int [pk, increment]
+  VehicleId int [ref: > Vehicle.VehicleId]
+  StartDate date
+  EndDate date
+}
+// ___________________________________________________________________________________________
+// |
+// |
+// |
+// ______________________________________ CardPermits  _______________________________________
+Table CardPermits { // Renamed from 'Permits'
+  permit_id int [pk, increment]
+  permit_number varchar(50) [not null, unique] // Unique identifier for the physical card
+  permit_type enum("Temporary", "Permanent")
+  PersonGUID uuid [ref: > People_History.PersonGUID, note:'FK to People_History. Filled if PermitHolderType is Person.']
+  issue_date date [not null]
+  expiration_date date
+  status varchar(20) [not null, default: 'Active'] // Consider ENUM if supported by your DB: 'Active', 'Expired', 'Revoked', 'Lost'
+  notes text
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
 
+Table CardPhotos {
+  photo_id int [pk, increment]
+  permit_id int [not null, unique] // One photo per permit
+  file_name varchar(255) [not null] // Original file name
+  file_path varchar(500) [not null] // Path or URL to the stored image file (e.g., S3 URL, local server path)
+  file_size_bytes bigint
+  mime_type varchar(50) // e.g., 'image/jpeg', 'image/png'
+  uploaded_at timestamp [default: `now()`]
+}
 
+Ref: CardPhotos.permit_id > CardPermits.permit_id [delete: cascade] // Updated reference
+// ___________________________________________________________________________________________
+// |
+// |
+// |
