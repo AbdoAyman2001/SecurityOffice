@@ -97,7 +97,9 @@ Table CorrespondenceTypes {
 }
 Table Contacts {
   ContactId int [pk, increment]
-  Name varchar(255)
+  Name varchar(255) [not null]
+  ContactType enum('Person', 'Organization') [not null, default: 'Person', note: 'Specifies if the contact is an individual or an official body.']
+  IsApprover boolean [not null, default: false, note: 'True if this contact (must be an Organization) has the authority to approve permits.']
 }
 Table CorrespondenceProcedures {
   ProcedureId int [pk, increment]
@@ -140,18 +142,16 @@ Table Approvers {
 Table ApprovalDecisions {
   ApprovalDecisionID int [pk, increment]
   PermitID int [not null, ref: > Permits.PermitID]
-  ApproverID int [not null, ref: > Approvers.ApproverID]
+  ApproverContactId int [not null, ref: > Contacts.ContactId, note: 'FK to the Contact (of type Organization) that is the official approver.'] // Changed from ApproverID
   
   DecisionStatus enum('Pending', 'Approved', 'Rejected') [not null, default: 'Pending']
   DecisionDate datetime
-  CorrespondenceId int [ref: > Correspondence.CorrespondenceId, note: 'Link to the formal letter of approval/rejection. NULL if the decision was verbal.']
-  Notes varchar(1000) [note: 'Required for verbal approvals to document who gave it and when. Also for any other context.']
+  CorrespondenceId int [ref: > Correspondence.CorrespondenceId, note: 'Link to the formal letter of approval/rejection. NULL if verbal.']
+  Notes varchar(1000) [note: 'Required for verbal approvals.']
   
   indexes {
-    (PermitID, ApproverID) [unique]
+    (PermitID, ApproverContactId) [unique] // Changed from ApproverID
   }
-  
-  note: 'Records a specific decision from one Approver regarding a Permit request.'
 }
 //___________________________________________________________________________________________
 
