@@ -16,6 +16,7 @@ import {
   FormControlLabel,
   Switch,
   Divider,
+  IconButton,
 } from "@mui/material";
 import {
   Save as SaveIcon,
@@ -23,6 +24,8 @@ import {
   Mail as MailIcon,
   AttachFile as AttachIcon,
   Add as AddIcon,
+  Lock as LockIcon,
+  Delete as DeleteIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import {
@@ -30,12 +33,24 @@ import {
   correspondenceTypesApi,
   contactsApi,
 } from "../services/apiService";
+import { useAuth } from "../contexts/AuthContext";
+import Header from "../components/Header";
 
 const LetterForm = () => {
   const navigate = useNavigate();
+  const { 
+    user, 
+    canCreateCorrespondence, 
+    canEditCorrespondence, 
+    canDeleteCorrespondence,
+    isAdmin,
+    getUserName 
+  } = useAuth();
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [hasPermission, setHasPermission] = useState(true);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -215,18 +230,88 @@ const LetterForm = () => {
   };
 
   useEffect(() => {
+    // Check permissions
+    if (!canCreateCorrespondence()) {
+      setHasPermission(false);
+      setError('ليس لديك صلاحية لإنشاء المراسلات');
+      return;
+    }
+    
     fetchLookupData();
-  }, []);
+  }, [canCreateCorrespondence]);
+
+  // Show permission error if user doesn't have access
+  if (!hasPermission) {
+    return (
+      <>
+        <Header />
+        <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
+          <Paper
+            elevation={2}
+            sx={{
+              p: 4,
+              borderRadius: 2,
+              textAlign: 'center',
+              border: '2px solid #f44336',
+            }}
+          >
+            <LockIcon sx={{ fontSize: 60, color: 'error.main', mb: 2 }} />
+            <Typography variant="h4" color="error" gutterBottom>
+              غير مصرح لك بالوصول
+            </Typography>
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+              ليس لديك صلاحية لإنشاء المراسلات. يرجى التواصل مع المدير للحصول على الصلاحيات المطلوبة.
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => navigate('/dashboard')}
+              sx={{ borderRadius: 2 }}
+            >
+              العودة إلى الصفحة الرئيسية
+            </Button>
+          </Paper>
+        </Box>
+      </>
+    );
+  }
 
   return (
-    <Box
-      sx={{
-        p: 3,
-        maxWidth: "1200px",
-        mx: "auto",
-        fontFamily: "Cairo, sans-serif",
-      }}
-    >
+    <>
+      <Header />
+      <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
+        {/* User Info Header */}
+        <Paper
+          elevation={1}
+          sx={{
+            p: 3,
+            mb: 3,
+            borderRadius: 2,
+            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography
+                variant="h4"
+                sx={{
+                  color: "primary.main",
+                  fontWeight: 600,
+                  fontFamily: "Cairo, sans-serif",
+                }}
+              >
+                إنشاء مراسلة جديدة
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                المستخدم: {getUserName()} • الدور: {isAdmin() ? 'مدير' : 'مستخدم عادي'}
+              </Typography>
+            </Box>
+            <Chip
+              label={canEditCorrespondence() ? 'صلاحية كاملة' : 'صلاحية محدودة'}
+              color={canEditCorrespondence() ? 'success' : 'warning'}
+              variant="outlined"
+            />
+          </Box>
+        </Paper>
       {/* Header */}
       <Paper
         elevation={2}
@@ -666,15 +751,13 @@ const LetterForm = () => {
                       border: "1px solid #e0e0e0",
                       display: "flex",
                       alignItems: "center",
-                      gap: 1,
-                      width: "100%",
+                      gap: 2,
                     }}
                   >
                     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                       <Typography
                         variant="body2"
                         sx={{
-                          fontWeight: 500,
                           overflow: "hidden",
                           textOverflow: "ellipsis",
                           whiteSpace: "nowrap",
@@ -757,7 +840,8 @@ const LetterForm = () => {
           </Box>
         </Paper>
       </form>
-    </Box>
+      </Box>
+    </>
   );
 };
 

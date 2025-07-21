@@ -17,6 +17,9 @@ import VehicleManagement from './pages/VehicleManagement';
 import CardPermitsManagement from './pages/CardPermitsManagement';
 import SettingsManagement from './pages/SettingsManagement';
 import LetterForm from './pages/LetterForm';
+import Login from './components/Login';
+import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider } from './contexts/AuthContext';
 
 // Create RTL cache
 const cacheRtl = createCache({
@@ -127,11 +130,12 @@ function App() {
   };
 
   return (
-    <CacheProvider value={cacheRtl}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Router>
-          <Box sx={{ display: 'flex', direction: 'rtl' }}>
+    <AuthProvider>
+      <CacheProvider value={cacheRtl}>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <Router>
+            <Box sx={{ display: 'flex', direction: 'rtl' }}>
             <Navbar onMenuClick={handleMenuClick} />
             <Sidebar open={sidebarOpen} onClose={handleSidebarClose} />
             
@@ -147,22 +151,24 @@ function App() {
               <Toolbar /> {/* Spacer for fixed navbar */}
               
               <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/people" element={<PeopleManagement />} />
-                <Route path="/correspondence" element={<CorrespondenceManagement />} />
-                <Route path="/permits" element={<PermitsManagement />} />
-                <Route path="/vehicles" element={<VehicleManagement />} />
-                <Route path="/cards" element={<CardPermitsManagement />} />
-                <Route path="/accidents" element={<AccidentsManagement />} />
-                <Route path="/relocation" element={<RelocationManagement />} />
-                <Route path="/settings" element={<SettingsManagement />} />
-                <Route path="/forms/letter" element={<LetterForm />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/people" element={<ProtectedRoute><PeopleManagement /></ProtectedRoute>} />
+                <Route path="/correspondence" element={<ProtectedRoute><CorrespondenceManagement /></ProtectedRoute>} />
+                <Route path="/permits" element={<ProtectedRoute><PermitsManagement /></ProtectedRoute>} />
+                <Route path="/vehicles" element={<ProtectedRoute><VehicleManagement /></ProtectedRoute>} />
+                <Route path="/cards" element={<ProtectedRoute><CardPermitsManagement /></ProtectedRoute>} />
+                <Route path="/accidents" element={<ProtectedRoute><AccidentsManagement /></ProtectedRoute>} />
+                <Route path="/relocation" element={<ProtectedRoute><RelocationManagement /></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><SettingsManagement /></ProtectedRoute>} />
+                <Route path="/forms/letter" element={<ProtectedRoute><LetterForm /></ProtectedRoute>} />
               </Routes>
             </Box>
           </Box>
-        </Router>
-      </ThemeProvider>
-    </CacheProvider>
+          </Router>
+        </ThemeProvider>
+      </CacheProvider>
+    </AuthProvider>
   );
 }
 

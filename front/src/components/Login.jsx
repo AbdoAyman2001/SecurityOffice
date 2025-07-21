@@ -74,7 +74,7 @@ const Login = () => {
     
     try {
       await login(formData.username, formData.password, formData.rememberMe);
-      navigate('/dashboard'); // Redirect to dashboard after successful login
+      navigate('/'); // Redirect to dashboard (root route) after successful login
     } catch (error) {
       console.error('Login failed:', error);
       // Error is handled by the auth context

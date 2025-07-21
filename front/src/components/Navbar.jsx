@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import {
   AppBar,
   Toolbar,
@@ -21,6 +22,7 @@ import {
 const Navbar = ({ onMenuClick }) => {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const navigate = useNavigate();
+  const { logout, user, isAuthenticated } = useAuth();
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -32,6 +34,17 @@ const Navbar = ({ onMenuClick }) => {
 
   const handleSettings = () => {
     navigate('/settings');
+    handleClose();
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+    handleClose();
+  };
+
+  const handleProfile = () => {
+    // Navigate to profile page when implemented
     handleClose();
   };
 
@@ -99,7 +112,7 @@ const Navbar = ({ onMenuClick }) => {
             open={Boolean(anchorEl)}
             onClose={handleClose}
           >
-            <MenuItem onClick={handleClose}>
+            <MenuItem onClick={handleProfile}>
               <AccountCircle sx={{ ml: 1 }} />
               الملف الشخصي
             </MenuItem>
@@ -107,7 +120,7 @@ const Navbar = ({ onMenuClick }) => {
               <Settings sx={{ ml: 1 }} />
               الإعدادات
             </MenuItem>
-            <MenuItem onClick={handleClose}>
+            <MenuItem onClick={handleLogout}>
               <Logout sx={{ ml: 1 }} />
               تسجيل الخروج
             </MenuItem>
