@@ -233,6 +233,24 @@ Table CardPhotos {
 }
 
 Ref: CardPhotos.permit_id > CardPermits.permit_id [delete: cascade] // Updated reference
+
+// ___________________________________________________________________________________________
+// |
+// |
+// |
+// ______________________________________ SETTINGS _______________________________________
+Table Settings {
+  id int [pk, increment]
+  key varchar(100) [not null, unique, note: 'Setting key/name']
+  value text [not null, note: 'Setting value']
+  setting_type varchar(20) [not null, default: 'text', note: 'Type: text, number, boolean, json, file']
+  description text [note: 'Description of this setting']
+  category varchar(50) [not null, default: 'general', note: 'Setting category']
+  is_active boolean [not null, default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
 // ___________________________________________________________________________________________
 // |
 // |
