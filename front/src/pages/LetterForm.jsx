@@ -34,7 +34,6 @@ import {
   contactsApi,
 } from "../services/apiService";
 import { useAuth } from "../contexts/AuthContext";
-import Header from "../components/Header";
 
 const LetterForm = () => {
   const navigate = useNavigate();
@@ -244,7 +243,6 @@ const LetterForm = () => {
   if (!hasPermission) {
     return (
       <>
-        <Header />
         <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
           <Paper
             elevation={2}
@@ -277,42 +275,9 @@ const LetterForm = () => {
 
   return (
     <>
-      <Header />
       <Box sx={{ maxWidth: 1200, mx: "auto", p: 3 }}>
-        {/* User Info Header */}
-        <Paper
-          elevation={1}
-          sx={{
-            p: 3,
-            mb: 3,
-            borderRadius: 2,
-            background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-          }}
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography
-                variant="h4"
-                sx={{
-                  color: "primary.main",
-                  fontWeight: 600,
-                  fontFamily: "Cairo, sans-serif",
-                }}
-              >
-                إنشاء مراسلة جديدة
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                المستخدم: {getUserName()} • الدور: {isAdmin() ? 'مدير' : 'مستخدم عادي'}
-              </Typography>
-            </Box>
-            <Chip
-              label={canEditCorrespondence() ? 'صلاحية كاملة' : 'صلاحية محدودة'}
-              color={canEditCorrespondence() ? 'success' : 'warning'}
-              variant="outlined"
-            />
-          </Box>
-        </Paper>
-      {/* Header */}
+        
+      {/* Form Section */}
       <Paper
         elevation={2}
         sx={{

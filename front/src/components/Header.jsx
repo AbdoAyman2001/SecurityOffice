@@ -170,15 +170,14 @@ const Header = () => {
             </MenuItem>
 
             {/* Admin Menu Items */}
-            {isAdmin() && (
-              <>
-                <MenuItem onClick={handleUserManagement}>
-                  <SettingsIcon sx={{ mr: 1 }} />
-                  إدارة المستخدمين
-                </MenuItem>
-                <Divider />
-              </>
-            )}
+            {isAdmin() && [
+              // Using array instead of Fragment as per MUI requirements
+              <MenuItem key="user-management" onClick={handleUserManagement}>
+                <SettingsIcon sx={{ mr: 1 }} />
+                إدارة المستخدمين
+              </MenuItem>,
+              <Divider key="admin-divider" />
+            ]}
 
             {/* Logout */}
             <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>

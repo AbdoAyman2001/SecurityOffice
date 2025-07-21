@@ -111,6 +111,12 @@ export const AuthProvider = ({ children }) => {
   const canViewReports = () => authService.canViewReports();
   const canManagePermits = () => authService.canManagePermits();
   const getUserName = () => user?.username || 'غير معروف';
+  const getUserRoleDisplay = () => {
+    if (!user) return 'غير مسجل';
+    if (isAdmin()) return 'مدير النظام';
+    if (isNormalUser()) return 'مستخدم';
+    return 'مستخدم';
+  };
 
   const value = {
     user,
@@ -131,7 +137,8 @@ export const AuthProvider = ({ children }) => {
     canManageUsers,
     canViewReports,
     canManagePermits,
-    getUserName
+    getUserName,
+    getUserRoleDisplay
   };
 
   return (

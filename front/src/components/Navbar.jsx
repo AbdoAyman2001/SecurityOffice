@@ -19,7 +19,7 @@ import {
   Logout,
 } from '@mui/icons-material';
 
-const Navbar = ({ onMenuClick }) => {
+const Navbar = ({ onMenuClick, pageTitle }) => {
   const [anchorEl, setAnchorEl] = React.useState(null);
   const navigate = useNavigate();
   const { logout, user, isAuthenticated } = useAuth();
