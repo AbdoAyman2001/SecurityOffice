@@ -37,37 +37,37 @@ const menuItems = [
     path: '/',
   },
   {
-    text: 'إدارة الأشخاص',
+    text: 'افراد',
     icon: <PeopleIcon />,
     path: '/people',
   },
   {
-    text: 'إدارة المراسلات',
+    text: 'مكاتبات',
     icon: <MailIcon />,
     path: '/correspondence',
   },
   {
-    text: 'إدارة التصاريح',
+    text: 'التصاريح',
     icon: <AssignmentIcon />,
     path: '/permits',
   },
   {
-    text: 'إدارة المركبات',
+    text: 'مركبات',
     icon: <CarIcon />,
     path: '/vehicles',
   },
   {
-    text: 'بطاقات الدخول',
+    text: 'كروت مؤمنة',
     icon: <CardIcon />,
     path: '/cards',
   },
   {
-    text: 'الحوادث',
+    text: 'حوادث وإصابات',
     icon: <AccidentIcon />,
     path: '/accidents',
   },
   {
-    text: 'النقل والإسكان',
+    text: 'تسكين',
     icon: <RelocationIcon />,
     path: '/relocation',
   },
@@ -75,9 +75,19 @@ const menuItems = [
 
 const formsMenuItems = [
   {
-    text: 'نموذج إضافة مراسلة',
+    text: 'إضافة خطاب',
     icon: <MailIcon />,
     path: '/forms/letter',
+  },
+  {
+    text: 'إضافة خطاب روسي',
+    icon: <MailIcon />,
+    path: '/forms/russian-letter',
+  },
+  {
+    text: 'إضافة مكاتبة جديدة',
+    icon: <MailIcon />,
+    path: '/forms/new-correspondence',
   },
   {
     text: 'نموذج طلب تصريح',
@@ -120,52 +130,12 @@ const Sidebar = ({ open, onClose }) => {
   };
 
   const drawer = (
-    <Box >
-      <Divider />
-      <List>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              selected={location.pathname === item.path}
-              onClick={() => handleNavigation(item.path)}
-              sx={{
-                '&.Mui-selected': {
-                  backgroundColor: 'rgba(25, 118, 210, 0.12)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(25, 118, 210, 0.2)',
-                  },
-                },
-                '&:hover': {
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  color: location.pathname === item.path ? 'primary.main' : 'inherit',
-                }}
-              >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={item.text}
-                sx={{
-                  '& .MuiListItemText-primary': {
-                    fontWeight: location.pathname === item.path ? 'bold' : 'normal',
-                    color: location.pathname === item.path ? 'primary.main' : 'inherit',
-                  },
-                }}
-              />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-      
+    <Box >      
       <Divider />
       
       {/* Forms Section */}
-      <Box sx={{ p: 2, backgroundColor: 'rgba(25, 118, 210, 0.05)' }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'primary.main', mb: 1 }}>
+      <Box sx={{ p: 1, backgroundColor: 'rgba(25, 118, 210, 0.05)' }}>
+        <Typography variant="subtitle2" mb={0} sx={{ fontWeight: 'bold', marginBottom: '0', color: 'primary.main', mb: 1 }}>
           <FormIcon sx={{ mr: 1, fontSize: 16 }} />
           النماذج
         </Typography>
@@ -209,7 +179,49 @@ const Sidebar = ({ open, onClose }) => {
           </ListItem>
         ))}
       </List>
-      
+
+
+      <List>
+        {/* Items */}
+        {menuItems.map((item) => (
+          <ListItem key={item.text} disablePadding>
+            <ListItemButton
+              selected={location.pathname === item.path}
+              onClick={() => handleNavigation(item.path)}
+              sx={{
+                '&.Mui-selected': {
+                  backgroundColor: 'rgba(25, 118, 210, 0.12)',
+                  '&:hover': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.2)',
+                  },
+                },
+                '&:hover': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  color: location.pathname === item.path ? 'primary.main' : 'inherit',
+                }}
+              >
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText 
+                primary={item.text}
+                sx={{
+                  '& .MuiListItemText-primary': {
+                    fontWeight: location.pathname === item.path ? 'bold' : 'normal',
+                    color: location.pathname === item.path ? 'primary.main' : 'inherit',
+                  },
+                }}
+              />
+            </ListItemButton>
+          </ListItem>
+        ))}
+      </List>
+
+
       {/* Admin Section - Only show for admin users */}
       {isAdmin() && (
         <>

@@ -17,6 +17,8 @@ import VehicleManagement from './pages/VehicleManagement';
 import CardPermitsManagement from './pages/CardPermitsManagement';
 import SettingsManagement from './pages/SettingsManagement';
 import LetterForm from './pages/LetterForm';
+import RussianLetterForm from './pages/RussianLetterForm';
+import NewCorrespondence from './pages/NewCorrespondence';
 import CorrespondenceConfig from './pages/CorrespondenceConfig';
 import Login from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -163,7 +165,9 @@ function App() {
                 <Route path="/relocation" element={<ProtectedRoute><RelocationManagement /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><SettingsManagement /></ProtectedRoute>} />
                 <Route path="/correspondence-config" element={<ProtectedRoute><CorrespondenceConfig /></ProtectedRoute>} />
-                <Route path="/forms/letter" element={<ProtectedRoute><LetterForm /></ProtectedRoute>} />
+                                <Route path="/forms/letter" element={<ProtectedRoute><LetterForm /></ProtectedRoute>} />
+                <Route path="/forms/russian-letter" element={<ProtectedRoute><RussianLetterForm /></ProtectedRoute>} />
+                <Route path="/forms/new-correspondence" element={<ProtectedRoute><NewCorrespondence /></ProtectedRoute>} />
               </Routes>
             </Box>
           </Box>
