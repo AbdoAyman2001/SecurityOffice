@@ -5,7 +5,7 @@ from .models import (
     CorrespondenceTypes, Contacts, Correspondence, CorrespondenceContacts,
     Attachments, CorrespondenceProcedures, Permits, ApprovalDecisions,
     Accidents, Relocation, RelocationPeriod, Vehicle, CarPermit,
-    CardPermits, CardPhotos, Settings
+    CardPermits, CardPhotos, Settings, CorrespondenceTypeProcedure, CorrespondenceStatusLog
 )
 
 from django.contrib.auth import authenticate
@@ -176,19 +176,44 @@ class CorrespondenceContactsSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class CorrespondenceTypeProcedureSerializer(serializers.ModelSerializer):
+    """Serializer for correspondence type procedures"""
+    correspondence_type_name = serializers.CharField(source='correspondence_type.type_name', read_only=True)
+    
+    class Meta:
+        model = CorrespondenceTypeProcedure
+        fields = '__all__'
+        read_only_fields = ['id']
+
+
+class CorrespondenceStatusLogSerializer(serializers.ModelSerializer):
+    """Serializer for correspondence status change logs"""
+    correspondence_reference = serializers.CharField(source='correspondence.reference_number', read_only=True)
+    from_status_name = serializers.CharField(source='from_status.procedure_name', read_only=True)
+    to_status_name = serializers.CharField(source='to_status.procedure_name', read_only=True)
+    changed_by_username = serializers.CharField(source='changed_by.username', read_only=True)
+    changed_by_full_name = serializers.CharField(source='changed_by.full_name_arabic', read_only=True)
+    
+    class Meta:
+        model = CorrespondenceStatusLog
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at']
+
+
 class CorrespondenceSerializer(serializers.ModelSerializer):
     type_name = serializers.CharField(source='type.type_name', read_only=True)
-    attachments = AttachmentsSerializer(many=True, read_only=True)
-    contacts = CorrespondenceContactsSerializer(
-        source='correspondencecontacts_set', 
-        many=True, 
-        read_only=True
-    )
+    type_name_english = serializers.CharField(source='type.type_name_english', read_only=True)
+    current_status_name = serializers.CharField(source='current_status.procedure_name', read_only=True)
+    assigned_to_username = serializers.CharField(source='assigned_to.username', read_only=True)
+    assigned_to_full_name = serializers.CharField(source='assigned_to.full_name_arabic', read_only=True)
+    contacts = CorrespondenceContactsSerializer(source='correspondencecontacts_set', many=True, read_only=True)
+    attachments = AttachmentsSerializer(source='attachments_set', many=True, read_only=True)
+    status_logs = CorrespondenceStatusLogSerializer(many=True, read_only=True)
     
     class Meta:
         model = Correspondence
         fields = '__all__'
-        read_only_fields = ['correspondence_id']
+        read_only_fields = ['correspondence_id', 'created_at']
 
 
 class CorrespondenceProceduresSerializer(serializers.ModelSerializer):

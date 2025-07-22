@@ -30,17 +30,82 @@ apiService.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Handle common errors
-    if (error.response?.status === 401) {
-      // Unauthorized - redirect to login
+    // Handle authorization errors
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Show user-friendly message
+      const message = error.response?.status === 401 
+        ? 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى'
+        : 'لا يوجد لديك صلاحية للوصول إلى هذه العملية. سيتم تسجيل خروجك';
+      
+      // Show notification
+      showAuthError(message, 'error');
+      
+      // Clear all auth data
       localStorage.removeItem('authToken');
-      window.location.href = '/login';
+      localStorage.removeItem('authUser');
+      localStorage.removeItem('authPermissions');
+      
+      // Redirect to login after a short delay to allow user to read the message
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 2000);
     }
     
     console.error('API Error:', error);
     return Promise.reject(error);
   }
 );
+
+// Helper function to show auth error notifications
+function showAuthError(message, type = 'error') {
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: ${type === 'error' ? '#f44336' : '#ff9800'};
+    color: white;
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10000;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    max-width: 400px;
+    animation: slideIn 0.3s ease-out;
+    direction: rtl;
+    text-align: right;
+  `;
+  
+  // Add animation keyframes if not already added
+  if (!document.querySelector('#auth-notification-styles')) {
+    const style = document.createElement('style');
+    style.id = 'auth-notification-styles';
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  notification.textContent = message;
+  document.body.appendChild(notification);
+  
+  // Remove after 4 seconds
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.style.animation = 'slideIn 0.3s ease-out reverse';
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }
+  }, 4000);
+}
 
 // API endpoints
 export const peopleApi = {
@@ -71,6 +136,24 @@ export const correspondenceTypesApi = {
   create: (data) => apiService.post('/correspondence-types/', data),
   update: (id, data) => apiService.put(`/correspondence-types/${id}/`, data),
   delete: (id) => apiService.delete(`/correspondence-types/${id}/`),
+};
+
+export const correspondenceTypeProceduresApi = {
+  getAll: (params = {}) => apiService.get('/correspondence-type-procedures/', { params }),
+  getById: (id) => apiService.get(`/correspondence-type-procedures/${id}/`),
+  create: (data) => apiService.post('/correspondence-type-procedures/', data),
+  update: (id, data) => apiService.put(`/correspondence-type-procedures/${id}/`, data),
+  delete: (id) => apiService.delete(`/correspondence-type-procedures/${id}/`),
+  getByType: (typeId) => apiService.get(`/correspondence-type-procedures/?correspondence_type=${typeId}`),
+};
+
+export const correspondenceStatusLogsApi = {
+  getAll: (params = {}) => apiService.get('/correspondence-status-logs/', { params }),
+  getById: (id) => apiService.get(`/correspondence-status-logs/${id}/`),
+  create: (data) => apiService.post('/correspondence-status-logs/', data),
+  update: (id, data) => apiService.put(`/correspondence-status-logs/${id}/`, data),
+  delete: (id) => apiService.delete(`/correspondence-status-logs/${id}/`),
+  getByCorrespondence: (correspondenceId) => apiService.get(`/correspondence-status-logs/?correspondence=${correspondenceId}`),
 };
 
 export const contactsApi = {

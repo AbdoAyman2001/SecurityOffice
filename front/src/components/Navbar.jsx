@@ -1,6 +1,6 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import {
   AppBar,
   Toolbar,
@@ -8,44 +8,25 @@ import {
   IconButton,
   Box,
   Avatar,
-  Menu,
-  MenuItem,
-} from '@mui/material';
+} from "@mui/material";
 import {
   Menu as MenuIcon,
   AccountCircle,
-  Notifications,
   Settings,
   Logout,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
 
 const Navbar = ({ onMenuClick, pageTitle }) => {
-  const [anchorEl, setAnchorEl] = React.useState(null);
   const navigate = useNavigate();
-  const { logout, user, isAuthenticated } = useAuth();
-
-  const handleMenu = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
+  const { logout, user, isAuthenticated, getUserName, isAdmin } = useAuth();
 
   const handleSettings = () => {
-    navigate('/settings');
-    handleClose();
+    navigate("/settings");
   };
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
-    handleClose();
-  };
-
-  const handleProfile = () => {
-    // Navigate to profile page when implemented
-    handleClose();
+    navigate("/login");
   };
 
   return (
@@ -53,7 +34,7 @@ const Navbar = ({ onMenuClick, pageTitle }) => {
       position="fixed"
       sx={{
         zIndex: (theme) => theme.zIndex.drawer + 1,
-        background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
+        background: "linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)",
       }}
     >
       <Toolbar>
@@ -66,65 +47,85 @@ const Navbar = ({ onMenuClick, pageTitle }) => {
         >
           <MenuIcon />
         </IconButton>
-        
-        <Typography
-          variant="h6"
-          noWrap
-          component="div"
+
+        <Box
           sx={{
             flexGrow: 1,
-            fontWeight: 'bold',
-            fontSize: '1.5rem',
-            textAlign: 'center',
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
           }}
         >
-          إدارة أمن الموقع
-        </Typography>
+          <Typography
+            variant="h6"
+            noWrap
+            component="div"
+            sx={{
+              fontWeight: "bold",
+              fontSize: "1.5rem",
+            }}
+          >
+            إدارة أمن الموقع
+          </Typography>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton color="inherit" aria-label="الإشعارات">
-            <Notifications />
-          </IconButton>
+          {pageTitle && (
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontSize: "1rem",
+                opacity: 0.9,
+                fontWeight: "medium",
+              }}
+            >
+              {pageTitle}
+            </Typography>
+          )}
+        </Box>
+
+        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+          {isAuthenticated && (
+            <Typography
+              variant="body1"
+              sx={{ color: "white", fontWeight: "medium" }}
+            >
+              {getUserName ? getUserName() : user?.username}
+            </Typography>
+          )}
+
+          {/* Logout Button */}
+          {isAuthenticated && (
+            <IconButton
+              size="large"
+              aria-label="تسجيل الخروج"
+              onClick={handleLogout}
+              color="inherit"
+              title="تسجيل الخروج"
+            >
+              <Logout />
+            </IconButton>
+          )}
           
+          {/* Account Icon (Static) */}
           <IconButton
             size="large"
             aria-label="حساب المستخدم الحالي"
-            aria-controls="menu-appbar"
-            aria-haspopup="true"
-            onClick={handleMenu}
             color="inherit"
           >
             <AccountCircle />
           </IconButton>
           
-          <Menu
-            id="menu-appbar"
-            anchorEl={anchorEl}
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
-            }}
-            keepMounted
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'left',
-            }}
-            open={Boolean(anchorEl)}
-            onClose={handleClose}
-          >
-            <MenuItem onClick={handleProfile}>
-              <AccountCircle sx={{ ml: 1 }} />
-              الملف الشخصي
-            </MenuItem>
-            <MenuItem onClick={handleSettings}>
-              <Settings sx={{ ml: 1 }} />
-              الإعدادات
-            </MenuItem>
-            <MenuItem onClick={handleLogout}>
-              <Logout sx={{ ml: 1 }} />
-              تسجيل الخروج
-            </MenuItem>
-          </Menu>
+          {/* Settings Button - Only for Admin */}
+          {isAdmin && isAdmin() && (
+            <IconButton
+              size="large"
+              aria-label="الإعدادات"
+              onClick={handleSettings}
+              color="inherit"
+              title="الإعدادات"
+            >
+              <Settings />
+            </IconButton>
+          )}
         </Box>
       </Toolbar>
     </AppBar>

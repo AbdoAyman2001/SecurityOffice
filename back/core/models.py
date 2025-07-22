@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.conf import settings
+from django.utils import timezone
 import uuid
 from django.core.validators import FileExtensionValidator
 
@@ -229,6 +231,29 @@ class CorrespondenceTypes(models.Model):
         return self.type_name
 
 
+class CorrespondenceTypeProcedure(models.Model):
+    """Procedures/statuses for each correspondence type"""
+    id = models.AutoField(primary_key=True)
+    correspondence_type = models.ForeignKey(CorrespondenceTypes, on_delete=models.CASCADE, related_name='procedures')
+    procedure_name = models.CharField(max_length=255, help_text='Name of the procedure/status step')
+    procedure_order = models.IntegerField(default=0, help_text='Order of this procedure in the workflow')
+    is_initial = models.BooleanField(default=False, help_text='True if this is the initial status')
+    is_final = models.BooleanField(default=False, help_text='True if this is a final status')
+    description = models.TextField(blank=True, null=True, help_text='Description of what happens in this procedure')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'correspondence_type_procedure'
+        verbose_name = 'Correspondence Type Procedure'
+        verbose_name_plural = 'Correspondence Type Procedures'
+        unique_together = ['correspondence_type', 'procedure_name']
+        ordering = ['correspondence_type', 'procedure_order']
+    
+    def __str__(self):
+        return f"{self.correspondence_type.type_name} - {self.procedure_name}"
+
+
 class Contacts(models.Model):
     """Contacts for correspondence"""
     CONTACT_TYPE_CHOICES = [
@@ -273,6 +298,10 @@ class Correspondence(models.Model):
     direction = models.CharField(max_length=50, choices=DIRECTION_CHOICES, help_text='the flow of the correspondence')
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal')
     summary = models.CharField(max_length=1000, blank=True, null=True)
+    current_status = models.ForeignKey('CorrespondenceTypeProcedure', on_delete=models.SET_NULL, null=True, blank=True, help_text='Current status/procedure of this correspondence')
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="المسؤول")
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         db_table = 'correspondence'
@@ -280,7 +309,32 @@ class Correspondence(models.Model):
         verbose_name_plural = 'Correspondence'
     
     def __str__(self):
-        return f"{self.reference_number} - {self.subject}"
+        return f"Correspondence {self.correspondence_id} - {self.subject or 'No Subject'}"
+    
+    def get_current_status_display(self):
+        """Get the display name of current status"""
+        return self.current_status.procedure_name if self.current_status else 'No Status'
+
+
+class CorrespondenceStatusLog(models.Model):
+    """Log of status changes for correspondence tracking"""
+    id = models.AutoField(primary_key=True)
+    correspondence = models.ForeignKey(Correspondence, on_delete=models.CASCADE, related_name='status_logs')
+    from_status = models.ForeignKey(CorrespondenceTypeProcedure, on_delete=models.SET_NULL, null=True, blank=True, related_name='from_status_logs', help_text='Previous status')
+    to_status = models.ForeignKey(CorrespondenceTypeProcedure, on_delete=models.CASCADE, related_name='to_status_logs', help_text='New status')
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="تم التغيير بواسطة")
+    change_reason = models.TextField(blank=True, null=True, help_text='Optional reason for the status change')
+    created_at = models.DateTimeField(default=timezone.now)
+    
+    class Meta:
+        db_table = 'correspondence_status_log'
+        verbose_name = 'Correspondence Status Log'
+        verbose_name_plural = 'Correspondence Status Logs'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        from_status_name = self.from_status.procedure_name if self.from_status else 'Initial'
+        return f"Correspondence {self.correspondence.correspondence_id}: {from_status_name} → {self.to_status.procedure_name} by {self.changed_by.username}"
 
 
 class CorrespondenceContacts(models.Model):

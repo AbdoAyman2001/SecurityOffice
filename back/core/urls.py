@@ -5,7 +5,8 @@ from .views import (
     EmploymentHistoryViewSet, FamilyRelationshipsViewSet,
     CorrespondenceTypesViewSet, ContactsViewSet, CorrespondenceViewSet,
     CorrespondenceContactsViewSet, AttachmentsViewSet,
-    CorrespondenceProceduresViewSet, PermitsViewSet, ApprovalDecisionsViewSet,
+    CorrespondenceProceduresViewSet, CorrespondenceTypeProcedureViewSet, CorrespondenceStatusLogViewSet,
+    PermitsViewSet, ApprovalDecisionsViewSet,
     AccidentsViewSet, RelocationViewSet, RelocationPeriodViewSet,
     VehicleViewSet, CarPermitViewSet, CardPermitsViewSet, CardPhotosViewSet,
     SettingsViewSet
@@ -35,6 +36,8 @@ router.register(r'correspondence', CorrespondenceViewSet)
 router.register(r'correspondence-contacts', CorrespondenceContactsViewSet)
 router.register(r'attachments', AttachmentsViewSet)
 router.register(r'correspondence-procedures', CorrespondenceProceduresViewSet)
+router.register(r'correspondence-type-procedures', CorrespondenceTypeProcedureViewSet)
+router.register(r'correspondence-status-logs', CorrespondenceStatusLogViewSet)
 
 # Approval endpoints
 router.register(r'permits', PermitsViewSet)

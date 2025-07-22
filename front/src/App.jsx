@@ -17,6 +17,7 @@ import VehicleManagement from './pages/VehicleManagement';
 import CardPermitsManagement from './pages/CardPermitsManagement';
 import SettingsManagement from './pages/SettingsManagement';
 import LetterForm from './pages/LetterForm';
+import CorrespondenceConfig from './pages/CorrespondenceConfig';
 import Login from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
@@ -161,6 +162,7 @@ function App() {
                 <Route path="/accidents" element={<ProtectedRoute><AccidentsManagement /></ProtectedRoute>} />
                 <Route path="/relocation" element={<ProtectedRoute><RelocationManagement /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><SettingsManagement /></ProtectedRoute>} />
+                <Route path="/correspondence-config" element={<ProtectedRoute><CorrespondenceConfig /></ProtectedRoute>} />
                 <Route path="/forms/letter" element={<ProtectedRoute><LetterForm /></ProtectedRoute>} />
               </Routes>
             </Box>

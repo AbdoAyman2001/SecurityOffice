@@ -22,8 +22,11 @@ import {
   Description as FormIcon,
   Assignment as PermitFormIcon,
   PersonAdd as PersonFormIcon,
+  Settings as SettingsIcon,
+  Tune as ConfigIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 240;
 
@@ -93,9 +96,23 @@ const formsMenuItems = [
   },
 ];
 
+const adminMenuItems = [
+  {
+    text: 'إعدادات النظام',
+    icon: <SettingsIcon />,
+    path: '/settings',
+  },
+  {
+    text: 'إعدادات المراسلات',
+    icon: <ConfigIcon />,
+    path: '/correspondence-config',
+  },
+];
+
 const Sidebar = ({ open, onClose }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin } = useAuth();
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -192,6 +209,58 @@ const Sidebar = ({ open, onClose }) => {
           </ListItem>
         ))}
       </List>
+      
+      {/* Admin Section - Only show for admin users */}
+      {isAdmin() && (
+        <>
+          <Divider />
+          <Box sx={{ p: 2, backgroundColor: 'rgba(220, 0, 78, 0.05)' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'secondary.main', mb: 1 }}>
+              <SettingsIcon sx={{ mr: 1, fontSize: 16 }} />
+              إعدادات المدير
+            </Typography>
+          </Box>
+          
+          <List>
+            {adminMenuItems.map((item) => (
+              <ListItem key={item.text} disablePadding>
+                <ListItemButton
+                  selected={location.pathname === item.path}
+                  onClick={() => handleNavigation(item.path)}
+                  sx={{
+                    '&.Mui-selected': {
+                      backgroundColor: 'rgba(220, 0, 78, 0.12)',
+                      '&:hover': {
+                        backgroundColor: 'rgba(220, 0, 78, 0.2)',
+                      },
+                    },
+                    '&:hover': {
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      color: location.pathname === item.path ? 'secondary.main' : 'inherit',
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.text}
+                    sx={{
+                      '& .MuiListItemText-primary': {
+                        fontWeight: location.pathname === item.path ? 'bold' : 'normal',
+                        color: location.pathname === item.path ? 'secondary.main' : 'inherit',
+                      },
+                    }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            ))}
+          </List>
+        </>
+      )}
     </Box>
   );
 

@@ -57,9 +57,6 @@ const CorrespondenceManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCorrespondence, setSelectedCorrespondence] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogMode, setDialogMode] = useState('view');
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -86,95 +83,118 @@ const CorrespondenceManagement = () => {
       field: 'correspondence_id',
       headerName: 'رقم المراسلة',
       width: 120,
+      editable: false,
+    },
+    {
+      field: 'reference_number',
+      headerName: 'رقم المرجع',
+      width: 150,
+      editable: true,
     },
     {
       field: 'subject',
       headerName: 'الموضوع',
       width: 300,
       flex: 1,
+      editable: true,
     },
     {
-      field: 'correspondence_type_name',
+      field: 'type_name',
       headerName: 'نوع المراسلة',
       width: 150,
-      valueGetter: (params) => params.row.correspondence_type?.type_name || 'غير محدد',
-    },
-    {
-      field: 'sender_name',
-      headerName: 'المرسل',
-      width: 200,
-      valueGetter: (params) => params.row.sender?.full_name_arabic || 'غير محدد',
-    },
-    {
-      field: 'date_received',
-      headerName: 'تاريخ الاستلام',
-      width: 150,
-      valueFormatter: (params) => {
-        if (params.value) {
-          return new Date(params.value).toLocaleDateString('ar-EG');
-        }
-        return '';
+      editable: false,
+      renderCell: (params) => {
+        return params?.row?.type_name || 'غير محدد';
       },
     },
     {
-      field: 'status',
-      headerName: 'الحالة',
+      field: 'direction',
+      headerName: 'الاتجاه',
       width: 120,
-      renderCell: (params) => (
-        <Chip
-          label={getStatusText(params.value)}
-          color={getStatusColor(params.value)}
-          size="small"
-        />
-      ),
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: [
+        { value: 'Incoming', label: 'واردة' },
+        { value: 'Outgoing', label: 'صادرة' },
+        { value: 'Internal', label: 'داخلية' },
+      ],
+      renderCell: (params) => {
+        const directionLabels = {
+          'Incoming': 'واردة',
+          'Outgoing': 'صادرة',
+          'Internal': 'داخلية'
+        };
+        return directionLabels[params?.value] || params?.value || 'غير محدد';
+      },
+    },
+    {
+      field: 'correspondence_date',
+      headerName: 'تاريخ المراسلة',
+      width: 150,
+      type: 'date',
+      editable: true,
+      valueGetter: (params) => {
+        return params?.row?.correspondence_date ? new Date(params.row.correspondence_date) : null;
+      },
+      renderCell: (params) => {
+        if (params?.row?.correspondence_date) {
+          return new Date(params.row.correspondence_date).toLocaleDateString('ar-EG');
+        }
+        return 'غير محدد';
+      },
     },
     {
       field: 'priority',
       headerName: 'الأولوية',
-      width: 100,
+      width: 120,
+      editable: true,
+      type: 'singleSelect',
+      valueOptions: [
+        { value: 'low', label: 'منخفضة' },
+        { value: 'normal', label: 'عادية' },
+        { value: 'high', label: 'عالية' },
+      ],
       renderCell: (params) => {
         const priorityColors = {
           low: 'success',
-          medium: 'warning',
+          normal: 'default',
           high: 'error',
         };
         const priorityText = {
           low: 'منخفضة',
-          medium: 'متوسطة',
+          normal: 'عادية',
           high: 'عالية',
         };
         return (
           <Chip
-            label={priorityText[params.value] || params.value}
-            color={priorityColors[params.value] || 'default'}
+            label={priorityText[params?.value] || params?.value || 'غير محدد'}
+            color={priorityColors[params?.value] || 'default'}
             size="small"
           />
         );
       },
     },
     {
-      field: 'actions',
-      headerName: 'الإجراءات',
+      field: 'current_status',
+      headerName: 'الحالة',
+      width: 150,
+      editable: false,
+      renderCell: (params) => {
+        const statusText = params?.row?.current_status?.procedure_name || 'غير محدد';
+        return (
+          <Chip
+            label={statusText}
+            color={params?.row?.current_status ? 'primary' : 'default'}
+            size="small"
+          />
+        );
+      },
+    },
+    {
+      field: 'summary',
+      headerName: 'ملخص',
       width: 200,
-      sortable: false,
-      renderCell: (params) => (
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            size="small"
-            startIcon={<ViewIcon />}
-            onClick={() => handleView(params.row)}
-          >
-            عرض
-          </Button>
-          <Button
-            size="small"
-            startIcon={<EditIcon />}
-            onClick={() => handleEdit(params.row)}
-          >
-            تعديل
-          </Button>
-        </Box>
-      ),
+      editable: true,
     },
   ];
 
@@ -215,33 +235,62 @@ const CorrespondenceManagement = () => {
     }
   };
 
-  const handleView = (item) => {
-    setSelectedCorrespondence(item);
-    setDialogMode('view');
-    setDialogOpen(true);
-  };
-
-  const handleEdit = (item) => {
-    setSelectedCorrespondence(item);
-    setDialogMode('edit');
-    setDialogOpen(true);
-  };
-
-  const handleAdd = () => {
-    setSelectedCorrespondence(null);
-    setDialogMode('add');
-    setDialogOpen(true);
-  };
-
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-    setSelectedCorrespondence(null);
-  };
-
   const handleKeyPress = (event) => {
     if (event.key === 'Enter') {
       handleSearch();
     }
+  };
+
+  const handleProcessRowUpdate = async (newRow) => {
+    try {
+      // Format date fields to YYYY-MM-DD format for backend
+      const formattedRow = { ...newRow };
+      
+      // List of date fields that need formatting
+      const dateFields = ['correspondence_date', 'due_date', 'date_received'];
+      
+      // Convert all date fields to YYYY-MM-DD format if they are Date objects
+      dateFields.forEach(field => {
+        if (formattedRow[field] instanceof Date) {
+          formattedRow[field] = formattedRow[field].toISOString().split('T')[0];
+        } else if (formattedRow[field] && typeof formattedRow[field] === 'string') {
+          // If it's already a string, ensure it's in the correct format
+          const date = new Date(formattedRow[field]);
+          if (!isNaN(date.getTime())) {
+            formattedRow[field] = date.toISOString().split('T')[0];
+          }
+        }
+      });
+      
+      // Update the correspondence via API
+      const response = await correspondenceApi.update(newRow.correspondence_id, formattedRow);
+      
+      // Update the local state with the original row data (not formatted)
+      setCorrespondence(prev => 
+        prev.map(row => 
+          row.correspondence_id === newRow.correspondence_id ? { ...row, ...newRow } : row
+        )
+      );
+      
+      return newRow;
+    } catch (error) {
+      console.error('Error updating correspondence:', error);
+      // Log the error details for debugging
+      if (error.response?.data) {
+        console.error('API Error Details:', error.response.data);
+      }
+      throw error;
+    }
+  };
+
+  const handleProcessRowUpdateError = (error) => {
+    console.error('Row update error:', error);
+    setError('فشل في حفظ التغييرات. يرجى المحاولة مرة أخرى.');
+  };
+
+  const handleAdd = () => {
+    // Navigate to LetterForm for adding new correspondence
+    window.location.href = '/letter-form';
   };
 
   return (
@@ -292,159 +341,40 @@ const CorrespondenceManagement = () => {
         <DataGrid
           rows={correspondence}
           columns={columns}
-          getRowId={(row) => row.correspondence_id}
+          pageSize={10}
+          rowsPerPageOptions={[5, 10, 25]}
+          checkboxSelection
+          disableSelectionOnClick
           loading={loading}
-          pageSizeOptions={[25, 50, 100]}
-          initialState={{
-            pagination: {
-              paginationModel: { page: 0, pageSize: 25 },
-            },
-          }}
-          slots={{
-            toolbar: () => <CustomToolbar onAdd={handleAdd} />,
+          getRowId={(row) => row.correspondence_id}
+          experimentalFeatures={{ newEditingApi: true }}
+          processRowUpdate={handleProcessRowUpdate}
+          onProcessRowUpdateError={handleProcessRowUpdateError}
+          components={{
+            Toolbar: () => <CustomToolbar onAdd={handleAdd} />,
           }}
           sx={{
+            height: 600,
             '& .MuiDataGrid-root': {
-              direction: 'rtl',
+              border: 'none',
+            },
+            '& .MuiDataGrid-cell': {
+              borderBottom: 'none',
             },
             '& .MuiDataGrid-columnHeaders': {
-              backgroundColor: 'rgba(25, 118, 210, 0.1)',
+              backgroundColor: '#f5f5f5',
+              color: '#333',
+              fontSize: 16,
+            },
+            '& .MuiDataGrid-cell--editable': {
+              backgroundColor: '#f9f9f9',
+            },
+            '& .MuiDataGrid-cell--editing': {
+              backgroundColor: '#e3f2fd',
             },
           }}
         />
       </Paper>
-
-      {/* Correspondence Details Dialog */}
-      <Dialog
-        open={dialogOpen}
-        onClose={handleCloseDialog}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle>
-          {dialogMode === 'view' && 'عرض تفاصيل المراسلة'}
-          {dialogMode === 'edit' && 'تعديل المراسلة'}
-          {dialogMode === 'add' && 'إضافة مراسلة جديدة'}
-        </DialogTitle>
-        <DialogContent>
-          {selectedCorrespondence && (
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="الموضوع"
-                  value={selectedCorrespondence.subject || ''}
-                  disabled={dialogMode === 'view'}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="رقم المراسلة"
-                  value={selectedCorrespondence.correspondence_number || ''}
-                  disabled={dialogMode === 'view'}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="تاريخ الاستلام"
-                  type="date"
-                  value={selectedCorrespondence.date_received?.split('T')[0] || ''}
-                  disabled={dialogMode === 'view'}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth disabled={dialogMode === 'view'}>
-                  <InputLabel>الحالة</InputLabel>
-                  <Select
-                    value={selectedCorrespondence.status || ''}
-                    label="الحالة"
-                  >
-                    <MenuItem value="pending">في الانتظار</MenuItem>
-                    <MenuItem value="in_progress">قيد المعالجة</MenuItem>
-                    <MenuItem value="completed">مكتملة</MenuItem>
-                    <MenuItem value="cancelled">ملغاة</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <FormControl fullWidth disabled={dialogMode === 'view'}>
-                  <InputLabel>الأولوية</InputLabel>
-                  <Select
-                    value={selectedCorrespondence.priority || ''}
-                    label="الأولوية"
-                  >
-                    <MenuItem value="low">منخفضة</MenuItem>
-                    <MenuItem value="medium">متوسطة</MenuItem>
-                    <MenuItem value="high">عالية</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="تاريخ الاستحقاق"
-                  type="date"
-                  value={selectedCorrespondence.due_date?.split('T')[0] || ''}
-                  disabled={dialogMode === 'view'}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="المحتوى"
-                  value={selectedCorrespondence.content || ''}
-                  multiline
-                  rows={4}
-                  disabled={dialogMode === 'view'}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="ملاحظات"
-                  value={selectedCorrespondence.notes || ''}
-                  multiline
-                  rows={3}
-                  disabled={dialogMode === 'view'}
-                />
-              </Grid>
-              {selectedCorrespondence.attachments && selectedCorrespondence.attachments.length > 0 && (
-                <Grid item xs={12}>
-                  <Typography variant="h6" sx={{ mb: 1 }}>
-                    المرفقات
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                    {selectedCorrespondence.attachments.map((attachment, index) => (
-                      <Chip
-                        key={index}
-                        icon={<AttachFileIcon />}
-                        label={attachment.file_name || `مرفق ${index + 1}`}
-                        clickable
-                        color="primary"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Box>
-                </Grid>
-              )}
-            </Grid>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>
-            {dialogMode === 'view' ? 'إغلاق' : 'إلغاء'}
-          </Button>
-          {dialogMode !== 'view' && (
-            <Button variant="contained" onClick={handleCloseDialog}>
-              {dialogMode === 'add' ? 'إضافة' : 'حفظ'}
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

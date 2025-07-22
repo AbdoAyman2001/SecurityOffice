@@ -25,53 +25,124 @@ export const AuthProvider = ({ children }) => {
     const checkAuth = async () => {
       try {
         setIsLoading(true);
-        const isAuthenticated = await authService.checkAuthStatus();
-        if (isAuthenticated) {
-          setUser(authService.getCurrentUser());
-          setPermissions(authService.getUserPermissions());
+        
+        // First try to restore from localStorage directly
+        const storedUser = JSON.parse(localStorage.getItem("user") || 'null');
+        const storedPermissions = JSON.parse(localStorage.getItem("permissions") || '{}');
+        const token = localStorage.getItem("authToken");
+        
+        if (storedUser && token) {
+          // Set initial state from localStorage
+          setUser(storedUser);
+          setPermissions(storedPermissions);
           setIsAuthenticated(true);
+          
+          // Then verify with server in background
+          try {
+            await authService.checkAuthStatus();
+            // Update with latest data from server
+            setUser(authService.getCurrentUser());
+            setPermissions(authService.getUserPermissions());
+          } catch (verifyErr) {
+            console.error("Token validation failed:", verifyErr);
+            // We'll keep the user logged in with stored data
+            // Server verification will happen on next API call
+          }
+        } else if (token) {
+          // We have a token but no user data, try to restore from server
+          const isAuthenticated = await authService.checkAuthStatus();
+          if (isAuthenticated) {
+            setUser(authService.getCurrentUser());
+            setPermissions(authService.getUserPermissions());
+            setIsAuthenticated(true);
+          } else {
+            // Clear invalid token
+            localStorage.removeItem("authToken");
+          }
         }
       } catch (err) {
         console.error("Authentication check failed:", err);
-        // Not setting error here as this is just a check
-        localStorage.removeItem("authToken");
       } finally {
         setIsLoading(false);
       }
     };
 
-    const token = localStorage.getItem("authToken");
-    if (token) {
-      checkAuth();
-    } else {
-      setIsLoading(false);
-    }
+    checkAuth();
   }, []);
 
   // Login function
   const login = async (username, password, rememberMe = false) => {
     try {
+      console.log('AuthContext: Starting login process...', { username });
       setIsLoading(true);
       setError(null);
       
       const data = await authService.login(username, password, rememberMe);
+      console.log('AuthContext: Login successful, data:', data);
       
       // authService already stores the token and user data
-      setUser(authService.getCurrentUser());
-      setPermissions(authService.getUserPermissions());
+      const currentUser = authService.getCurrentUser();
+      const userPermissions = authService.getUserPermissions();
+      
+      console.log('AuthContext: Setting user data:', { currentUser, userPermissions });
+      
+      setUser(currentUser);
+      setPermissions(userPermissions);
       setIsAuthenticated(true);
       
+      console.log('AuthContext: Login completed successfully');
       return true;
     } catch (err) {
-      console.error("Login failed:", err);
-      setError(
-        typeof err === 'string' ? err : 
-        (err.message || "Login failed. Please check your credentials.")
-      );
+      console.error("AuthContext: Login failed:", err);
+      console.error("AuthContext: Error details:", {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      
+      let errorMessage = "فشل في تسجيل الدخول";
+      
+      if (err.response?.status === 401) {
+        errorMessage = "اسم المستخدم أو كلمة المرور غير صحيحة";
+      } else if (err.response?.status === 403) {
+        errorMessage = "لا يوجد لديك صلاحية للوصول إلى هذا النظام";
+      } else if (err.code === 'NETWORK_ERROR' || !err.response) {
+        errorMessage = "فشل في الاتصال بالخادم. يرجى المحاولة لاحقاً";
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      
+      // Force logout on failed login to clear any inconsistent state
+      console.log('AuthContext: Login failed, forcing logout to clear state');
+      await this.forceLogout();
+      
       return false;
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Force logout without API call (for failed login scenarios)
+  const forceLogout = async () => {
+    console.log('AuthContext: Force logout - clearing all state');
+    
+    // Clear all state
+    setUser(null);
+    setPermissions([]);
+    setIsAuthenticated(false);
+    setError(null);
+    
+    // Clear localStorage
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    localStorage.removeItem('permissions');
+    
+    // Clear authService state
+    authService.clearAuthData();
   };
 
   // Logout function
@@ -98,6 +169,7 @@ export const AuthProvider = ({ children }) => {
 
   // Clear any authentication errors
   const clearError = () => {
+    console.log('AuthContext: Clearing error');
     setError(null);
   };
 

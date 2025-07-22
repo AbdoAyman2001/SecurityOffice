@@ -5,7 +5,7 @@ from .models import (
     CorrespondenceTypes, Contacts, Correspondence, CorrespondenceContacts,
     Attachments, CorrespondenceProcedures, Permits, ApprovalDecisions,
     Accidents, Relocation, RelocationPeriod, Vehicle, CarPermit,
-    CardPermits, CardPhotos, Settings
+    CardPermits, CardPhotos, Settings, CorrespondenceTypeProcedure, CorrespondenceStatusLog
 )
 from .serializers import (
     PeopleHistorySerializer, CompaniesHistorySerializer, EmploymentHistorySerializer,
@@ -14,7 +14,7 @@ from .serializers import (
     CorrespondenceProceduresSerializer, PermitsSerializer, ApprovalDecisionsSerializer,
     AccidentsSerializer, RelocationSerializer, RelocationPeriodSerializer,
     VehicleSerializer, CarPermitSerializer, CardPermitsSerializer,
-    CardPhotosSerializer, SettingsSerializer
+    CardPhotosSerializer, SettingsSerializer, CorrespondenceTypeProcedureSerializer, CorrespondenceStatusLogSerializer
 )
 
 
@@ -99,6 +99,28 @@ class CorrespondenceProceduresViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['status']
     search_fields = ['description']
+
+
+class CorrespondenceTypeProcedureViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing correspondence type procedures"""
+    queryset = CorrespondenceTypeProcedure.objects.all()
+    serializer_class = CorrespondenceTypeProcedureSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['correspondence_type', 'is_initial', 'is_final']
+    search_fields = ['procedure_name', 'description']
+    ordering_fields = ['procedure_order', 'procedure_name']
+    ordering = ['correspondence_type', 'procedure_order']
+
+
+class CorrespondenceStatusLogViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing correspondence status change logs"""
+    queryset = CorrespondenceStatusLog.objects.all()
+    serializer_class = CorrespondenceStatusLogSerializer
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['correspondence', 'from_status', 'to_status', 'changed_by']
+    search_fields = ['change_reason', 'correspondence__reference_number']
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
 
 
 # ====================================== PERMITS VIEWSETS ======================================
