@@ -304,21 +304,6 @@ def check_auth_status(request):
     """
     Check if user is authenticated and return basic info
     """
-
-    # --- DEBUGGING LINE START ---
-    print("\n--- Incoming Request Headers ---")
-    for header, value in request.META.items():
-        if header.startswith('HTTP_'): # HTTP headers are prefixed with HTTP_ in META
-            # Convert HTTP_AUTHORIZATION to Authorization for readability
-            readable_header = header[5:].replace('_', '-').upper()
-            print(f"{readable_header}: {value}")
-        elif header == 'CONTENT_TYPE' or header == 'CONTENT_LENGTH':
-            print(f"{header}: {value}")
-    print("----------------------------\n")
-
-    print(f"Request User: {request.user}")
-    print(f"Is Authenticated: {request.user.is_authenticated}")
-    # --- DEBUGGING LINE END ---
         
     return Response({
         'authenticated': True,

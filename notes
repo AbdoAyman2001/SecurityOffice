@@ -1,0 +1,6 @@
+@RussianLetterForm.jsx I want you to add feature for this file, 
+
+I want you to allow the drag and drop files to this page and we will process this file as follows
+1- we will receive the file and make sure that this file is of type .msg, the same type that we drag from the microsoft office outlook 
+2- we will send this file to the back end @back that you should add an endpoint to 
+3- the backend should process the .msg file and extract all the attachments and send it back to the 

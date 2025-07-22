@@ -16,3 +16,4 @@ six @ file:///AppleInternal/Library/BuildRoots/39d9dc1a-2111-11f0-be06-226177e5b
 sqlparse==0.5.3
 typing_extensions==4.14.0
 urllib3==2.5.0
+extract-msg

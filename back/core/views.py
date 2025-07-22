@@ -1,5 +1,16 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
+from django.core.files.base import ContentFile
+import os
+import tempfile
+import json
+import extract_msg
+import email
+from email import policy
+import mimetypes
 from .models import (
     PeopleHistory, CompaniesHistory, EmploymentHistory, FamilyRelationships,
     CorrespondenceTypes, Contacts, Correspondence, CorrespondenceContacts,
@@ -217,3 +228,92 @@ class SettingsViewSet(viewsets.ModelViewSet):
     search_fields = ['key', 'description']
     ordering_fields = ['category', 'key', 'updated_at']
     ordering = ['category', 'key']
+
+
+# ====================================== MSG FILE PROCESSING ======================================
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def process_msg_file(request):
+    """
+    Process a .msg file and extract its attachments.
+    Returns the extracted attachments as a list of file objects.
+    """
+    if 'file' not in request.FILES:
+        return Response(
+            {'error': 'No file provided'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    msg_file = request.FILES['file']
+    
+    # Validate file extension
+    if not msg_file.name.lower().endswith('.msg'):
+        return Response(
+            {'error': 'File must be a .msg file'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Create a temporary file to save the uploaded .msg file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.msg') as temp_file:
+            # Write the uploaded file content to temp file
+            for chunk in msg_file.chunks():
+                temp_file.write(chunk)
+            temp_file_path = temp_file.name
+        
+        try:
+            # Parse the .msg file using extract-msg library
+            msg = extract_msg.Message(temp_file_path)
+            
+            # Extract attachments from the .msg file
+            attachments_data = []
+            
+            if hasattr(msg, 'attachments') and msg.attachments:
+                for i, attachment in enumerate(msg.attachments):
+                    try:
+                        # Get attachment data
+                        attachment_data = attachment.data
+                        attachment_name = attachment.longFilename or attachment.shortFilename or f'attachment_{i}'
+                        
+                        if attachment_data:
+                            # Create file-like object for the attachment
+                            attachment_info = {
+                                'name': attachment_name,
+                                'size': len(attachment_data),
+                                'data': attachment_data.hex(),  # Convert to hex for JSON serialization
+                                'mime_type': getattr(attachment, 'mimeType', 'application/octet-stream')
+                            }
+                            attachments_data.append(attachment_info)
+                    except Exception as e:
+                        print(f'Error processing attachment {i}: {str(e)}')
+                        continue
+            
+            # Extract email metadata for reference
+            email_info = {
+                'subject': getattr(msg, 'subject', ''),
+                'sender': getattr(msg, 'sender', ''),
+                'date': str(getattr(msg, 'date', '')),
+                'body': getattr(msg, 'body', '')[:500] if getattr(msg, 'body', '') else ''  # First 500 chars
+            }
+            
+            return Response({
+                'success': True,
+                'attachments': attachments_data,
+                'email_info': email_info,
+                'message': f'Successfully extracted {len(attachments_data)} attachments from {msg_file.name}'
+            }, status=status.HTTP_200_OK)
+            
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_file_path):
+                os.unlink(temp_file_path)
+                
+    except Exception as e:
+        # Clean up temporary file in case of error
+        if 'temp_file_path' in locals() and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
+            
+        return Response(
+            {'error': f'Failed to process .msg file: {str(e)}'}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

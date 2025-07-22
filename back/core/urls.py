@@ -9,7 +9,7 @@ from .views import (
     PermitsViewSet, ApprovalDecisionsViewSet,
     AccidentsViewSet, RelocationViewSet, RelocationPeriodViewSet,
     VehicleViewSet, CarPermitViewSet, CardPermitsViewSet, CardPhotosViewSet,
-    SettingsViewSet
+    SettingsViewSet, process_msg_file
 )
 from .auth_views import (
     LoginView, LogoutView, UserProfileView, ChangePasswordView,
@@ -77,4 +77,7 @@ urlpatterns = [
     # User management endpoints (Admin only)
     path('api/auth/users/', UserManagementView.as_view(), name='auth_users'),
     path('api/auth/users/<int:user_id>/', UserDetailView.as_view(), name='auth_user_detail'),
+    
+    # MSG file processing endpoint
+    path('api/process-msg/', process_msg_file, name='process_msg_file'),
 ]

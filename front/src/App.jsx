@@ -18,6 +18,7 @@ import CardPermitsManagement from './pages/CardPermitsManagement';
 import SettingsManagement from './pages/SettingsManagement';
 import LetterForm from './pages/LetterForm';
 import RussianLetterForm from './pages/RussianLetterForm';
+import RussianLetters from './pages/RussianLetters';
 import NewCorrespondence from './pages/NewCorrespondence';
 import CorrespondenceConfig from './pages/CorrespondenceConfig';
 import Login from './components/Login';
@@ -146,7 +147,7 @@ function App() {
               component="main"
               sx={{
                 flexGrow: 1,
-                p: 3,
+                p: 0,
                 backgroundColor: 'background.default',
                 minHeight: '100vh',
               }}
@@ -165,9 +166,10 @@ function App() {
                 <Route path="/relocation" element={<ProtectedRoute><RelocationManagement /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><SettingsManagement /></ProtectedRoute>} />
                 <Route path="/correspondence-config" element={<ProtectedRoute><CorrespondenceConfig /></ProtectedRoute>} />
-                                <Route path="/forms/letter" element={<ProtectedRoute><LetterForm /></ProtectedRoute>} />
+                <Route path="/forms/letter" element={<ProtectedRoute><LetterForm /></ProtectedRoute>} />
                 <Route path="/forms/russian-letter" element={<ProtectedRoute><RussianLetterForm /></ProtectedRoute>} />
                 <Route path="/forms/new-correspondence" element={<ProtectedRoute><NewCorrespondence /></ProtectedRoute>} />
+                <Route path="/russian-letters" element={<ProtectedRoute><RussianLetters /></ProtectedRoute>} />
               </Routes>
             </Box>
           </Box>

@@ -163,7 +163,8 @@ export const AuthProvider = ({ children }) => {
 
   // Check if user has specific permission
   const hasPermission = (permissionName) => {
-    if (!permissions || permissions.length === 0) return false;
+    // Ensure permissions is an array before using includes
+    if (!permissions || !Array.isArray(permissions) || permissions.length === 0) return false;
     return permissions.includes(permissionName);
   };
 

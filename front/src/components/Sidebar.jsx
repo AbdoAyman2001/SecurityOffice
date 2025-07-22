@@ -47,6 +47,11 @@ const menuItems = [
     path: '/correspondence',
   },
   {
+    text: 'الخطابات',
+    icon: <MailIcon />,
+    path: '/russian-letters',
+  },
+  {
     text: 'التصاريح',
     icon: <AssignmentIcon />,
     path: '/permits',
