@@ -82,11 +82,6 @@ const formsMenuItems = [
   {
     text: 'إضافة خطاب',
     icon: <MailIcon />,
-    path: '/forms/letter',
-  },
-  {
-    text: 'إضافة خطاب روسي',
-    icon: <MailIcon />,
     path: '/forms/russian-letter',
   },
   {
