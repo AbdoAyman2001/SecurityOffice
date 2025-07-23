@@ -9,7 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
-media
+back/media/
 dist-ssr
 *.local
 
