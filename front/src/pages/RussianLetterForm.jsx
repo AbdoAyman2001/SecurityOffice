@@ -67,9 +67,9 @@ const RussianLetterForm = () => {
       </Box>
     );
   }
-
+//
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 2, maxWidth: 800, margin: 'auto', position: 'relative' }}>
       {/* Drag and Drop Overlay */}
       {dragActive && (
         <Box
