@@ -14,7 +14,7 @@ import mimetypes
 from .models import (
     PeopleHistory, CompaniesHistory, EmploymentHistory, FamilyRelationships,
     CorrespondenceTypes, Contacts, Correspondence, CorrespondenceContacts,
-    Attachments, CorrespondenceProcedures, Permits, ApprovalDecisions,
+    Attachments, Permits, ApprovalDecisions,
     Accidents, Relocation, RelocationPeriod, Vehicle, CarPermit,
     CardPermits, CardPhotos, Settings, CorrespondenceTypeProcedure, CorrespondenceStatusLog
 )
@@ -22,7 +22,7 @@ from .serializers import (
     PeopleHistorySerializer, CompaniesHistorySerializer, EmploymentHistorySerializer,
     FamilyRelationshipsSerializer, CorrespondenceTypesSerializer, ContactsSerializer,
     CorrespondenceSerializer, CorrespondenceContactsSerializer, AttachmentsSerializer,
-    CorrespondenceProceduresSerializer, PermitsSerializer, ApprovalDecisionsSerializer,
+    PermitsSerializer, ApprovalDecisionsSerializer,
     AccidentsSerializer, RelocationSerializer, RelocationPeriodSerializer,
     VehicleSerializer, CarPermitSerializer, CardPermitsSerializer,
     CardPhotosSerializer, SettingsSerializer, CorrespondenceTypeProcedureSerializer, CorrespondenceStatusLogSerializer
@@ -102,14 +102,6 @@ class AttachmentsViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     filterset_fields = ['file_type']
     search_fields = ['file_name']
-
-
-class CorrespondenceProceduresViewSet(viewsets.ModelViewSet):
-    queryset = CorrespondenceProcedures.objects.all()
-    serializer_class = CorrespondenceProceduresSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['status']
-    search_fields = ['description']
 
 
 class CorrespondenceTypeProcedureViewSet(viewsets.ModelViewSet):

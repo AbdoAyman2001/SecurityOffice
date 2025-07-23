@@ -118,7 +118,7 @@ const adminMenuItems = [
     path: '/settings',
   },
   {
-    text: 'إعدادات المراسلات',
+    text: 'إعدادات الخطابات',
     icon: <ConfigIcon />,
     path: '/correspondence-config',
   },

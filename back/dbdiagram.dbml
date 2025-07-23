@@ -75,42 +75,60 @@ Table Correspondence {
   Direction varchar(255) [note:'the flow of the correspondence, Incoming, Outgoing and Internal']
   Priority enum("high", 'normal', 'low')
   Summary varchar(1000)
+  CurrentStatus int [ref: > CorrespondenceTypeProcedure.ProcedureId, note:'Current status of the correspondence']
+  AssignedTo int [ref: > Users.userId, note:'User assigned to handle this correspondence']
+  CreatedAt timestamp [default: `now()`]
+  UpdatedAt timestamp [default: `now()`]
 }
+
 Table CorrespondenceContacts{
   ContactId int [ref: > Contacts.ContactId]
   CorrespondenceId int [ref: > Correspondence.CorrespondenceId]
-  Role enum('Sender','Resipient','CC','BCC')
+  Role enum('Sender','Recipient','CC','BCC')
 
   indexes {
     (CorrespondenceId, ContactId, Role) [pk]
   }
 } 
+
 Table Attachments { 
   AttachmentId int [pk, increment]
   CorrespondenceId int [ref: > Correspondence.CorrespondenceId]
-  FileName varchar(255) [not null]
-  FilePath varchar(1024) [not null]
+  File varchar(500) [not null, note:'FileField path to uploaded file']
+  FileName varchar(255) [not null, note:'Original filename']
   FileType varchar(100) [note:'mime type']
-  FileSize bigint
+  FileSize bigint [note:'File size in bytes']
+  UploadedAt timestamp [default: `now()`]
 }
+
 Table CorrespondenceTypes { 
   CorrespondenceTypeId int [pk, increment]
   TypeName varchar(255)
+}
+
+Table CorrespondenceTypeProcedure {
+  ProcedureId int [pk, increment]
+  CorrespondenceType int [ref: > CorrespondenceTypes.CorrespondenceTypeId]
+  ProcedureName varchar(255) [not null]
+  IsInitial boolean [default: false, note:'True if this is the initial status for new correspondence']
+  IsFinal boolean [default: false, note:'True if this is a final status']
+  OrderIndex int [note:'Order of this procedure in the workflow']
+}
+
+Table CorrespondenceStatusLog {
+  Id int [pk, increment]
+  CorrespondenceId int [ref: > Correspondence.CorrespondenceId]
+  FromStatus int [ref: > CorrespondenceTypeProcedure.ProcedureId, note:'Previous status (null for initial)']
+  ToStatus int [ref: > CorrespondenceTypeProcedure.ProcedureId, note:'New status']
+  ChangedBy int [ref: > Users.userId, note:'User who made the change']
+  ChangeReason text [note:'Optional reason for the status change']
+  CreatedAt timestamp [default: `now()`]
 }
 Table Contacts {
   ContactId int [pk, increment]
   Name varchar(255) [not null]
   ContactType enum('Person', 'Organization') [not null, default: 'Person', note: 'Specifies if the contact is an individual or an official body.']
   IsApprover boolean [not null, default: false, note: 'True if this contact (must be an Organization) has the authority to approve permits.']
-}
-Table CorrespondenceProcedures {
-  ProcedureId int [pk, increment]
-  ResponsiblePerson int [not null, ref: > Users.userId]
-  LetterId int [not null, ref: > Correspondence.CorrespondenceId] // Foreign key to Letters table
-  ProcedureDate date [not null]
-  Description varchar(2000) [not null]
-  Status varchar(50) // e.g., 'Pending', 'In Progress', 'Completed'
-  Notes varchar(1000)
 }
 Table Users { 
   userId int [pk, increment]

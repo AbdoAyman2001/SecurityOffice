@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from .models import (
     User, PeopleHistory, CompaniesHistory, EmploymentHistory, FamilyRelationships,
     CorrespondenceTypes, Contacts, Correspondence, CorrespondenceContacts, Attachments,
-    CorrespondenceProcedures, Permits, ApprovalDecisions, Accidents, Relocation,
+    CorrespondenceStatusLog, Permits, ApprovalDecisions, Accidents, Relocation,
     RelocationPeriod, Vehicle, CarPermit, CardPermits, CardPhotos, Settings
 )
 
@@ -202,11 +202,16 @@ class AttachmentsAdmin(admin.ModelAdmin):
     search_fields = ['file_name']
 
 
-@admin.register(CorrespondenceProcedures)
-class CorrespondenceProceduresAdmin(admin.ModelAdmin):
-    list_display = ['procedure_id', 'responsible_person', 'letter', 'procedure_date', 'status']
-    list_filter = ['status', 'procedure_date']
-    search_fields = ['description']
+@admin.register(CorrespondenceStatusLog)
+class CorrespondenceStatusLogAdmin(admin.ModelAdmin):
+    list_display = ['id', 'correspondence', 'from_status', 'to_status', 'changed_by', 'created_at']
+    list_filter = ['to_status', 'from_status', 'created_at', 'changed_by']
+    search_fields = ['correspondence__reference_number', 'correspondence__subject', 'change_reason']
+    readonly_fields = ['created_at']
+    ordering = ['-created_at']
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('correspondence', 'from_status', 'to_status', 'changed_by')
 
 
 # ====================================== APPROVAL ADMIN ======================================

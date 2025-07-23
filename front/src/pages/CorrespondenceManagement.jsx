@@ -209,7 +209,7 @@ const CorrespondenceManagement = () => {
       setCorrespondence(response.data.results || response.data);
     } catch (err) {
       console.error('Error fetching correspondence:', err);
-      setError('حدث خطأ في تحميل بيانات المراسلات');
+      setError('حدث خطأ في تحميل بيانات الخطابات');
     } finally {
       setLoading(false);
     }
@@ -296,7 +296,7 @@ const CorrespondenceManagement = () => {
   return (
     <Box>
       <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 4, fontWeight: 'bold' }}>
-        إدارة المراسلات
+        إدارة الخطابات
       </Typography>
 
       {error && (

@@ -33,7 +33,8 @@ import {
   correspondenceApi,
   correspondenceTypesApi,
   correspondenceTypeProceduresApi,
-  contactsApi
+  contactsApi,
+  attachmentsApi
 } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -426,15 +427,25 @@ const RussianLetterForm = () => {
         assigned_to: null // Ensure assigned_to is always null
       };
 
+      // Create the correspondence first
       const response = await correspondenceApi.create(submissionData);
+      const correspondenceId = response.data.correspondence?.correspondence_id || response.data.correspondence_id;
+      
+      // Upload attachments if any
+      if (formData.attachments.length > 0) {
+        try {
+          await attachmentsApi.upload(correspondenceId, formData.attachments);
+        } catch (attachmentError) {
+          console.error('Error uploading attachments:', attachmentError);
+          // Don't fail the entire operation if attachments fail
+        }
+      }
       
       setSuccess('تم حفظ الخطاب الروسي بنجاح!');
       
-      // Navigate to correspondence details after a short delay
-      // setTimeout(() => {
-      //   navigate(`/correspondence/${response.data.correspondence_id || response.data.id}`);
-      // }, 2000);
-
+      // Reset form after successful submission
+      // resetForm();
+      
     } catch (err) {
       console.error('Error submitting form:', err);
       const errorMessage = err.response?.data?.detail || 
@@ -446,9 +457,42 @@ const RussianLetterForm = () => {
     }
   };
 
+  // Reset form to initial state
+  const resetForm = () => {
+    setFormData({
+      reference_number: '',
+      correspondence_date: new Date().toISOString().split('T')[0],
+      parent_correspondence: null,
+      type: '',
+      subject: '',
+      direction: 'Incoming',
+      priority: 'normal',
+      summary: '',
+      current_status: '',
+      assigned_to: null,
+      contact: '', // Will be reset to ASE contact
+      attachments: []
+    });
+    
+    // Reset UI state
+    setError(null);
+    setSuccess(null);
+    setDragActive(false);
+    setParentSearchTerm('');
+    
+    // Re-find and set ASE contact as default
+    const aseContact = contacts.find(contact => 
+      contact.name?.toLowerCase().includes('ase') || 
+      contact.company_name?.toLowerCase().includes('ase')
+    );
+    if (aseContact) {
+      setFormData(prev => ({ ...prev, contact: aseContact.id || aseContact.contact_id }));
+    }
+  };
+
   // Handle cancel
   const handleCancel = () => {
-    navigate(-1);
+    navigate('/russian-letters');
   };
 
   // Add global drag and drop event listeners
@@ -751,11 +795,13 @@ const RussianLetterForm = () => {
 
           {/* Attachments - Drag and Drop */}
           <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" gutterBottom>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              <AttachIcon sx={{ mr: 1 }} />
               المرفقات *
             </Typography>
-            
-            {/* Drag and Drop Area */}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              يجب إرفاق ملف واحد على الأقل
+            </Typography>
             <Paper
               sx={{
                 border: `2px dashed ${dragActive ? 'primary.main' : 'grey.300'}`,
@@ -784,7 +830,7 @@ const RussianLetterForm = () => {
                 أو انقر لاختيار الملفات
               </Typography>
               <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                يُقبل جميع أنواع الملفات • ملفات .msg سيتم استخراج مرفقاتها تلقائياً
+                يُقبل جميع أنواع الملفات
               </Typography>
             </Paper>
             

@@ -15,7 +15,7 @@ apiService.interceptors.request.use(
     // Add auth token if available
     const token = localStorage.getItem('authToken');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Token ${token}`;
     }
     return config;
   },
@@ -34,7 +34,7 @@ apiService.interceptors.response.use(
     if (error.response?.status === 401 || error.response?.status === 403) {
       // Show user-friendly message
       const message = error.response?.status === 401 
-        ? 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى'
+        ? 'انتهت صلاحية رمز المصادقة. يرجى تسجيل الدخول مرة أخرى'
         : 'لا يوجد لديك صلاحية للوصول إلى هذه العملية. سيتم تسجيل خروجك';
       
       // Show notification
@@ -156,6 +156,8 @@ export const correspondenceStatusLogsApi = {
   getByCorrespondence: (correspondenceId) => apiService.get(`/correspondence-status-logs/?correspondence=${correspondenceId}`),
 };
 
+
+
 export const contactsApi = {
   getAll: (params = {}) => apiService.get('/contacts/', { params }),
   getApprovers: () => apiService.get('/contacts/approvers/'),
@@ -163,6 +165,31 @@ export const contactsApi = {
   create: (data) => apiService.post('/contacts/', data),
   update: (id, data) => apiService.put(`/contacts/${id}/`, data),
   delete: (id) => apiService.delete(`/contacts/${id}/`),
+};
+
+export const attachmentsApi = {
+  getAll: (params = {}) => apiService.get('/attachments/', { params }),
+  getById: (id) => apiService.get(`/attachments/${id}/`),
+  getByCorrespondence: (correspondenceId) => apiService.get(`/attachments/?correspondence=${correspondenceId}`),
+  upload: (correspondenceId, files) => {
+    const formData = new FormData();
+    formData.append('correspondence_id', correspondenceId);
+    
+    // Add all files to FormData
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+    
+    return apiService.post('/attachments/upload/', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+  download: (id) => apiService.get(`/attachments/${id}/download/`, {
+    responseType: 'blob',
+  }),
+  delete: (id) => apiService.delete(`/attachments/${id}/`),
 };
 
 export const permitsApi = {

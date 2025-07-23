@@ -321,8 +321,8 @@ class CorrespondenceStatusLog(models.Model):
     id = models.AutoField(primary_key=True)
     correspondence = models.ForeignKey(Correspondence, on_delete=models.CASCADE, related_name='status_logs')
     from_status = models.ForeignKey(CorrespondenceTypeProcedure, on_delete=models.SET_NULL, null=True, blank=True, related_name='from_status_logs', help_text='Previous status')
-    to_status = models.ForeignKey(CorrespondenceTypeProcedure, on_delete=models.CASCADE, related_name='to_status_logs', help_text='New status')
-    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="تم التغيير بواسطة")
+    to_status = models.ForeignKey(CorrespondenceTypeProcedure, on_delete=models.SET_NULL, null=True, related_name='to_status_logs', help_text='New status')
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="تم التغيير بواسطة", null=True, blank=True)
     change_reason = models.TextField(blank=True, null=True, help_text='Optional reason for the status change')
     created_at = models.DateTimeField(default=timezone.now)
     
@@ -360,14 +360,19 @@ class CorrespondenceContacts(models.Model):
         return f"{self.contact.name} - {self.role}"
 
 
+def attachment_upload_path(instance, filename):
+    """Generate upload path for attachments"""
+    return f'attachments/{instance.correspondence.correspondence_id}/{filename}'
+
 class Attachments(models.Model):
     """File attachments for correspondence"""
     attachment_id = models.AutoField(primary_key=True)
     correspondence = models.ForeignKey(Correspondence, on_delete=models.CASCADE, related_name='attachments')
-    file_name = models.CharField(max_length=255)
-    file_path = models.CharField(max_length=1024)
+    file = models.FileField(upload_to=attachment_upload_path, help_text='Uploaded file')
+    file_name = models.CharField(max_length=255, help_text='Original filename')
     file_type = models.CharField(max_length=100, blank=True, null=True, help_text='mime type')
-    file_size = models.BigIntegerField(blank=True, null=True)
+    file_size = models.BigIntegerField(blank=True, null=True, help_text='File size in bytes')
+    uploaded_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         db_table = 'attachments'
@@ -376,25 +381,6 @@ class Attachments(models.Model):
     
     def __str__(self):
         return self.file_name
-
-
-class CorrespondenceProcedures(models.Model):
-    """Procedures related to correspondence"""
-    procedure_id = models.AutoField(primary_key=True)
-    responsible_person = models.ForeignKey(User, on_delete=models.CASCADE)
-    letter = models.ForeignKey(Correspondence, on_delete=models.CASCADE)
-    procedure_date = models.DateField()
-    description = models.CharField(max_length=2000)
-    status = models.CharField(max_length=50, blank=True, null=True)  # e.g., 'Pending', 'In Progress', 'Completed'
-    notes = models.CharField(max_length=1000, blank=True, null=True)
-    
-    class Meta:
-        db_table = 'correspondence_procedures'
-        verbose_name = 'Correspondence Procedure'
-        verbose_name_plural = 'Correspondence Procedures'
-    
-    def __str__(self):
-        return f"{self.description[:50]}..."
 
 
 # ====================================== APPROVAL ======================================

@@ -1,14 +1,16 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import (
+from .viewsets import (
     PeopleHistoryViewSet, CompaniesHistoryViewSet,
     EmploymentHistoryViewSet, FamilyRelationshipsViewSet,
     CorrespondenceTypesViewSet, ContactsViewSet, CorrespondenceViewSet,
     CorrespondenceContactsViewSet, AttachmentsViewSet,
-    CorrespondenceProceduresViewSet, CorrespondenceTypeProcedureViewSet, CorrespondenceStatusLogViewSet,
     PermitsViewSet, ApprovalDecisionsViewSet,
     AccidentsViewSet, RelocationViewSet, RelocationPeriodViewSet,
-    VehicleViewSet, CarPermitViewSet, CardPermitsViewSet, CardPhotosViewSet,
+    VehicleViewSet, CarPermitViewSet, CardPermitsViewSet, CardPhotosViewSet
+)
+from .views import (
+    CorrespondenceTypeProcedureViewSet, CorrespondenceStatusLogViewSet,
     SettingsViewSet, process_msg_file
 )
 from .auth_views import (
@@ -19,9 +21,6 @@ from .auth_views import (
 
 # Create a router and register our viewsets with it
 router = DefaultRouter()
-
-# User endpoints (commented out - no UserViewSet in views.py yet)
-# router.register(r'users', UserViewSet)
 
 # People endpoints
 router.register(r'people-history', PeopleHistoryViewSet)
@@ -35,7 +34,7 @@ router.register(r'contacts', ContactsViewSet)
 router.register(r'correspondence', CorrespondenceViewSet)
 router.register(r'correspondence-contacts', CorrespondenceContactsViewSet)
 router.register(r'attachments', AttachmentsViewSet)
-router.register(r'correspondence-procedures', CorrespondenceProceduresViewSet)
+
 router.register(r'correspondence-type-procedures', CorrespondenceTypeProcedureViewSet)
 router.register(r'correspondence-status-logs', CorrespondenceStatusLogViewSet)
 

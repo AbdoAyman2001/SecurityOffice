@@ -1,12 +1,14 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
 from .models import (
     PeopleHistory, CompaniesHistory, EmploymentHistory, FamilyRelationships,
     CorrespondenceTypes, Contacts, Correspondence, CorrespondenceContacts,
-    Attachments, CorrespondenceProcedures, Permits, ApprovalDecisions,
+    Attachments, CorrespondenceStatusLog, Permits, ApprovalDecisions,
     Accidents, Relocation, RelocationPeriod, Vehicle, CarPermit,
     CardPermits, CardPhotos
 )
@@ -15,7 +17,7 @@ from .serializers import (
     EmploymentHistorySerializer, FamilyRelationshipsSerializer,
     CorrespondenceTypesSerializer, ContactsSerializer, CorrespondenceSerializer,
     CorrespondenceContactsSerializer, AttachmentsSerializer,
-    CorrespondenceProceduresSerializer, PermitsSerializer, ApprovalDecisionsSerializer,
+    PermitsSerializer, ApprovalDecisionsSerializer,
     AccidentsSerializer, RelocationSerializer, RelocationPeriodSerializer,
     VehicleSerializer, CarPermitSerializer, CardPermitsSerializer, CardPhotosSerializer,
     PeopleHistorySummarySerializer, CorrespondenceSummarySerializer
@@ -127,11 +129,90 @@ class ContactsViewSet(viewsets.ModelViewSet):
 class CorrespondenceViewSet(viewsets.ModelViewSet):
     queryset = Correspondence.objects.all()
     serializer_class = CorrespondenceSerializer
+    authentication_classes = [TokenAuthentication]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['reference_number', 'subject', 'summary']
     filterset_fields = ['direction', 'priority', 'type', 'correspondence_date']
     ordering_fields = ['correspondence_date', 'reference_number', 'priority']
     ordering = ['-correspondence_date']
+    
+    def get_permissions(self):
+        """Set permissions based on action"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Require authentication for write operations
+            permission_classes = [IsAuthenticated]
+        else:
+            # Allow read operations without authentication
+            permission_classes = []
+        return [permission() for permission in permission_classes]
+    
+    def create(self, request, *args, **kwargs):
+        """Create correspondence with related records"""
+        from django.db import transaction
+        from django.contrib.auth.models import AnonymousUser
+        
+        # Check if user is authenticated
+        if isinstance(request.user, AnonymousUser):
+            return Response(
+                {'error': 'Authentication required to create correspondence'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Extract related data from request
+        contact_id = request.data.get('contact')
+        attachments_data = request.data.get('attachments', [])
+        
+        with transaction.atomic():
+            # Create the main correspondence record
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            correspondence = serializer.save()
+            
+            # Create contact relationship if provided
+            if contact_id:
+                try:
+                    # Try to get the contact by ID (could be contact_id or id field)
+                    try:
+                        contact = Contacts.objects.get(contact_id=contact_id)
+                    except Contacts.DoesNotExist:
+                        # Fallback to id field if contact_id doesn't work
+                        contact = Contacts.objects.get(id=contact_id)
+                    
+                    # Create the correspondence contact relationship
+                    correspondence_contact = CorrespondenceContacts.objects.create(
+                        correspondence=correspondence,
+                        contact=contact,
+                        role='Sender'  # Default role for Russian letters
+                    )
+                    print(f"Successfully created correspondence contact: {correspondence_contact}")
+                    
+                except Contacts.DoesNotExist:
+                    print(f"Warning: Contact with ID {contact_id} not found")
+                    # Continue without failing the entire operation
+                except Exception as e:
+                    print(f"Error creating correspondence contact: {e}")
+                    # Continue without failing the entire operation
+            
+            # Create initial status log entry if user is authenticated and status exists
+            if correspondence.current_status and request.user.is_authenticated:
+                CorrespondenceStatusLog.objects.create(
+                    correspondence=correspondence,
+                    from_status=None,  # Initial status
+                    to_status=correspondence.current_status,
+                    changed_by=request.user,
+                    change_reason='Initial correspondence creation'
+                )
+            
+            # Return the created correspondence with all related data
+            headers = self.get_success_headers(serializer.data)
+            return Response(
+                {
+                    'correspondence': serializer.data,
+                    'message': 'Correspondence created successfully'
+                },
+                status=status.HTTP_201_CREATED,
+                headers=headers
+            )
 
     @action(detail=False, methods=['get'])
     def summary(self, request):
@@ -161,16 +242,87 @@ class AttachmentsViewSet(viewsets.ModelViewSet):
     filterset_fields = ['file_type', 'correspondence']
     ordering_fields = ['file_name', 'file_size']
     ordering = ['file_name']
+    
+    @action(detail=False, methods=['post'])
+    def upload(self, request):
+        """Upload files for a correspondence"""
+        import os
+        from django.conf import settings
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+        import mimetypes
+        correspondence_id = request.data.get('correspondence_id')
+        files = request.FILES.getlist('files')
+        
+        if not correspondence_id:
+            return Response(
+                {'error': 'correspondence_id is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not files:
+            return Response(
+                {'error': 'No files provided'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            correspondence = Correspondence.objects.get(correspondence_id=correspondence_id)
+        except Correspondence.DoesNotExist:
+            return Response(
+                {'error': 'Correspondence not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        uploaded_files = []
+        
+        for file in files:
+            # Create attachment record with FileField handling the file storage
+            attachment = Attachments.objects.create(
+                correspondence=correspondence,
+                file=file,  # FileField handles the upload path and storage
+                file_name=file.name,
+                file_type=file.content_type,
+                file_size=file.size
+            )
+            
+            uploaded_files.append({
+                'attachment_id': attachment.attachment_id,
+                'file_name': attachment.file_name,
+                'file_size': attachment.file_size,
+                'file_type': attachment.file_type,
+                'file_url': attachment.file.url if attachment.file else None
+            })
+        
+        return Response(
+            {
+                'message': f'Successfully uploaded {len(uploaded_files)} files',
+                'files': uploaded_files
+            },
+            status=status.HTTP_201_CREATED
+        )
 
-
-class CorrespondenceProceduresViewSet(viewsets.ModelViewSet):
-    queryset = CorrespondenceProcedures.objects.all()
-    serializer_class = CorrespondenceProceduresSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['description', 'notes']
-    filterset_fields = ['status', 'responsible_person', 'procedure_date']
-    ordering_fields = ['procedure_date', 'status']
-    ordering = ['-procedure_date']
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        """Download an attachment file"""
+        from django.http import FileResponse, Http404
+        
+        attachment = self.get_object()
+        
+        # Check if file exists using FileField
+        if not attachment.file or not attachment.file.name:
+            raise Http404("File not found")
+        
+        try:
+            response = FileResponse(
+                attachment.file.open('rb'),
+                content_type=attachment.file_type or 'application/octet-stream',
+                as_attachment=True,
+                filename=attachment.file_name
+            )
+            return response
+        except FileNotFoundError:
+            raise Http404("File not found")
 
 
 # ====================================== APPROVAL VIEWSETS ======================================

@@ -212,7 +212,7 @@ const CorrespondenceConfig = () => {
       const response = await correspondenceTypesApi.getAll();
       setCorrespondenceTypes(response.data.results || response.data);
     } catch (error) {
-      showNotification("خطأ في تحميل أنواع المراسلات", "error");
+      showNotification("خطأ في تحميل أنواع الخطابات", "error");
       console.error("Error loading correspondence types:", error);
     } finally {
       setLoading(false);
@@ -436,7 +436,7 @@ const CorrespondenceConfig = () => {
         sx={{ display: "flex", alignItems: "center", gap: 1 }}
       >
         <SettingsIcon />
-        إعدادات المراسلات والإجراءات
+        إعدادات الخطابات والإجراءات
       </Typography>
 
       <Paper sx={{ width: "100%" }}>
@@ -445,7 +445,7 @@ const CorrespondenceConfig = () => {
           onChange={handleTabChange}
           aria-label="configuration tabs"
         >
-          <Tab label="أنواع المراسلات" />
+          <Tab label="أنواع الخطابات" />
           <Tab label="إجراءات الأنواع" />
         </Tabs>
 
@@ -459,7 +459,7 @@ const CorrespondenceConfig = () => {
               mb: 2,
             }}
           >
-            <Typography variant="h6">إدارة أنواع المراسلات</Typography>
+            <Typography variant="h6">إدارة أنواع الخطابات</Typography>
             <Button
               variant="contained"
               startIcon={<AddIcon />}

@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from .models import (
     PeopleHistory, CompaniesHistory, EmploymentHistory, FamilyRelationships,
     CorrespondenceTypes, Contacts, Correspondence, CorrespondenceContacts,
-    Attachments, CorrespondenceProcedures, Permits, ApprovalDecisions,
+    Attachments, Permits, ApprovalDecisions,
     Accidents, Relocation, RelocationPeriod, Vehicle, CarPermit,
     CardPermits, CardPhotos, Settings, CorrespondenceTypeProcedure, CorrespondenceStatusLog
 )
@@ -214,16 +214,6 @@ class CorrespondenceSerializer(serializers.ModelSerializer):
         model = Correspondence
         fields = '__all__'
         read_only_fields = ['correspondence_id', 'created_at']
-
-
-class CorrespondenceProceduresSerializer(serializers.ModelSerializer):
-    responsible_person_name = serializers.CharField(source='responsible_person.username', read_only=True)
-    letter_reference = serializers.CharField(source='letter.reference_number', read_only=True)
-    
-    class Meta:
-        model = CorrespondenceProcedures
-        fields = '__all__'
-        read_only_fields = ['procedure_id']
 
 
 # ====================================== APPROVAL SERIALIZERS ======================================

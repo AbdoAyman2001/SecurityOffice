@@ -135,7 +135,7 @@ const Dashboard = () => {
         
         <Grid item xs={12} sm={6} md={4}>
           <StatCard
-            title="المراسلات"
+            title="الخطابات"
             value={stats.correspondence}
             icon={<MailIcon />}
             color="secondary"
@@ -192,7 +192,7 @@ const Dashboard = () => {
               إدارة بيانات الأشخاص والموظفين
             </Typography>
             <Typography component="li" variant="body2" sx={{ mb: 1 }}>
-              متابعة المراسلات الواردة والصادرة
+              متابعة الخطابات الواردة والصادرة
             </Typography>
             <Typography component="li" variant="body2" sx={{ mb: 1 }}>
               إصدار ومتابعة التصاريح الأمنية
