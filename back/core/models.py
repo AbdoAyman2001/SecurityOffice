@@ -307,6 +307,7 @@ class Correspondence(models.Model):
         db_table = 'correspondence'
         verbose_name = 'Correspondence'
         verbose_name_plural = 'Correspondence'
+        unique_together = ['reference_number', 'correspondence_date']
     
     def __str__(self):
         return f"Correspondence {self.correspondence_id} - {self.subject or 'No Subject'}"
