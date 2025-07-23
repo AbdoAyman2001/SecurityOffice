@@ -1,54 +1,107 @@
 // File handling utilities for Russian Letter Form
 
-// Parse PDF filename to extract letter information
-export const parsePdfFilename = (filename) => {
-  // Remove file extension
-  const nameWithoutExt = filename.replace(/\.[^/.]+$/, '');
-  
-  // Pattern: [number] [space] [dd] [space] [8-digit-date]_[subject]
-  // Example: "7612 dd 22072025_On the Site Access for Contractor's Vehicle (Chevrolet ,2500, 1998, Green)"
-  const pattern = /^(\d+)\s+[a-z]+\s+(\d{8})[_ ]?(.*)$/i;
-  const match = nameWithoutExt.match(pattern);
-  
-  if (match) {
-    const [, refNumber, dateStr, subject] = match;
+// Parse PDF content using backend API (primary method)
+export const parsePdfContentViaBackend = async (file) => {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+    const authToken = localStorage.getItem('authToken');
     
-    // Parse date from DDMMYYYY format
-    const day = dateStr.substring(0, 2);
-    const month = dateStr.substring(2, 4);
-    const year = dateStr.substring(4, 8);
-    const formattedDate = `${year}-${month}-${day}`;
+    const formData = new FormData();
+    formData.append('file', file);
     
+    const response = await fetch(`${API_BASE_URL}/api/parse-pdf-content/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${authToken}`,
+      },
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error parsing PDF content via backend:', error);
     return {
-      reference_number: refNumber,
-      correspondence_date: formattedDate,
-      subject: subject.trim(),
-      parsed: true
+      success: false,
+      parsed: false,
+      error: error.message
     };
   }
-  
-  return { parsed: false };
 };
 
-// Analyze attachments and auto-fill form if PDF with correct pattern is found
-export const analyzeAttachmentsAndAutoFill = (attachments, setFormData) => {
-  const pdfFiles = attachments.filter(file => 
-    file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-  );
-  
-  for (const pdfFile of pdfFiles) {
-    const parsed = parsePdfFilename(pdfFile.name);
-    if (parsed.parsed) {
-      // Auto-fill form with parsed data
-      setFormData(prev => ({
-        ...prev,
-        reference_number: parsed.reference_number,
-        correspondence_date: parsed.correspondence_date,
-        subject: parsed.subject
-      }));
+// Parse filename using backend API (fallback method)
+export const parseFilenameViaBackend = async (filename) => {
+  try {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+    const authToken = localStorage.getItem('authToken');
+    
+    const response = await fetch(`${API_BASE_URL}/api/parse-filename/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Token ${authToken}`,
+      },
+      body: JSON.stringify({ filename })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    console.error('Error parsing filename via backend:', error);
+    return {
+      success: false,
+      parsed: false,
+      error: error.message
+    };
+  }
+};
+
+// Analyze attachments and auto-fill form using backend parsing
+export const analyzeAttachmentsAndAutoFill = async (attachments, setFormData) => {
+  // Process files with priority: PDF content parsing first, then filename parsing
+  for (const file of attachments) {
+    try {
+      let parseResult = null;
       
-      console.log('Auto-filled form from PDF filename:', parsed);
-      break; // Use the first matching PDF
+      // For PDF files, try content parsing first
+      if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+        console.log(`Attempting PDF content parsing for: ${file.name}`);
+        parseResult = await parsePdfContentViaBackend(file);
+        
+        // If PDF content parsing failed, fall back to filename parsing
+        if (!parseResult.success || !parseResult.parsed) {
+          console.log(`PDF content parsing failed for ${file.name}, trying filename parsing...`);
+          parseResult = await parseFilenameViaBackend(file.name);
+        }
+      } else {
+        // For non-PDF files, use filename parsing
+        parseResult = await parseFilenameViaBackend(file.name);
+      }
+      
+      if (parseResult.success && parseResult.parsed && parseResult.data) {
+        // Auto-fill form with parsed data
+        setFormData(prev => ({
+          ...prev,
+          reference_number: parseResult.data.reference_number || prev.reference_number,
+          correspondence_date: parseResult.data.correspondence_date || prev.correspondence_date,
+          subject: parseResult.data.subject || prev.subject
+        }));
+        
+        const method = parseResult.method || parseResult.pattern || 'unknown';
+        console.log(`Auto-filled form from ${file.name} using method: ${method}`);
+        return; // Stop after first successful parse
+      }
+    } catch (error) {
+      console.error(`Error parsing file ${file.name}:`, error);
+      // Continue to next file
     }
   }
 };

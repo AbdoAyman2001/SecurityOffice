@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { processFiles, analyzeAttachmentsAndAutoFill } from '../utils/fileUtils';
 
 export const useDragAndDrop = (formData, setFormData, setDragActive) => {
@@ -67,8 +67,10 @@ export const useDragAndDrop = (formData, setFormData, setDragActive) => {
             attachments: [...prev.attachments, ...extractedFiles]
           }));
           
-          // Analyze extracted files for PDF patterns
-          analyzeAttachmentsAndAutoFill(extractedFiles, setFormData);
+          // Analyze extracted files for patterns (async)
+          analyzeAttachmentsAndAutoFill(extractedFiles, setFormData).catch(error => {
+            console.error('Error analyzing extracted files:', error);
+          });
           
           console.log(`Extracted ${result.attachments.length} attachments from ${msgFile.name}`);
         } else {
@@ -133,7 +135,10 @@ export const useDragAndDrop = (formData, setFormData, setDragActive) => {
       });
       
       // Analyze regular files for PDF patterns
-      analyzeAttachmentsAndAutoFill(regularFiles, setFormData);
+      // Analyze regular files for patterns (async)
+      analyzeAttachmentsAndAutoFill(regularFiles, setFormData).catch(error => {
+        console.error('Error analyzing regular files:', error);
+      });
     }
     
     // Process .msg files by sending them to backend

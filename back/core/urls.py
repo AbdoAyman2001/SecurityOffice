@@ -1,17 +1,14 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .viewsets import (
-    PeopleHistoryViewSet, CompaniesHistoryViewSet,
-    EmploymentHistoryViewSet, FamilyRelationshipsViewSet,
-    CorrespondenceTypesViewSet, ContactsViewSet, CorrespondenceViewSet,
-    CorrespondenceContactsViewSet, AttachmentsViewSet,
-    PermitsViewSet, ApprovalDecisionsViewSet,
-    AccidentsViewSet, RelocationViewSet, RelocationPeriodViewSet,
-    VehicleViewSet, CarPermitViewSet, CardPermitsViewSet, CardPhotosViewSet
-)
 from .views import (
-    CorrespondenceTypeProcedureViewSet, CorrespondenceStatusLogViewSet,
-    SettingsViewSet, process_msg_file
+    PeopleHistoryViewSet, CompaniesHistoryViewSet, EmploymentHistoryViewSet,
+    FamilyRelationshipsViewSet, CorrespondenceTypesViewSet, ContactsViewSet,
+    CorrespondenceViewSet, CorrespondenceContactsViewSet, AttachmentsViewSet,
+    PermitsViewSet, ApprovalDecisionsViewSet, AccidentsViewSet,
+    RelocationViewSet, RelocationPeriodViewSet, VehicleViewSet,
+    CarPermitViewSet, CardPermitsViewSet, CardPhotosViewSet, SettingsViewSet,
+    CorrespondenceTypeProcedureViewSet, CorrespondenceStatusLogViewSet, 
+    parse_pdf_content, parse_filename, process_msg_file
 )
 from .auth_views import (
     LoginView, LogoutView, UserProfileView, ChangePasswordView,
@@ -77,6 +74,8 @@ urlpatterns = [
     path('api/auth/users/', UserManagementView.as_view(), name='auth_users'),
     path('api/auth/users/<int:user_id>/', UserDetailView.as_view(), name='auth_user_detail'),
     
-    # MSG file processing endpoint
+    # File processing endpoints
+    path('api/parse-pdf-content/', parse_pdf_content, name='parse_pdf_content'),
+    path('api/parse-filename/', parse_filename, name='parse_filename'),
     path('api/process-msg/', process_msg_file, name='process_msg_file'),
 ]
