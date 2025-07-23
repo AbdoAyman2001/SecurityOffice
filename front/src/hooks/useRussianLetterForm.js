@@ -81,7 +81,9 @@ export const useRussianLetterForm = () => {
 
   // Handle input changes
   const handleInputChange = (field, value) => {
+    console.log(`handleInputChange called: field=${field}, value=${value}`);
     setFormData(prev => {
+      console.log('Previous formData:', prev);
       const newData = {
         ...prev,
         [field]: value
@@ -89,14 +91,17 @@ export const useRussianLetterForm = () => {
       
       // Auto-select initial status when correspondence type is selected
       if (field === 'type' && value) {
+        console.log('Type selected, looking for initial procedure...');
         const initialProcedure = procedures.find(proc => 
           proc.correspondence_type === value && proc.is_initial === true
         );
+        console.log('Found initial procedure:', initialProcedure);
         if (initialProcedure) {
           newData.current_status = initialProcedure.procedure_id;
         }
       }
       
+      console.log('New formData:', newData);
       return newData;
     });
   };
@@ -165,10 +170,17 @@ export const useRussianLetterForm = () => {
       // Upload attachments if any
       if (formData.attachments.length > 0) {
         try {
-          await attachmentsApi.upload(correspondenceId, formData.attachments);
+          const uploadResponse = await attachmentsApi.upload(correspondenceId, formData.attachments);
+          console.log('Attachments uploaded successfully:', uploadResponse.data);
         } catch (attachmentError) {
           console.error('Error uploading attachments:', attachmentError);
-          // Don't fail the entire operation if attachments fail
+          // Surface attachment upload errors to the user
+          const attachmentErrorMessage = attachmentError.response?.data?.error || 
+                                       attachmentError.response?.data?.message || 
+                                       'فشل في رفع المرفقات. تم حفظ الخطاب ولكن لم يتم رفع المرفقات.';
+          setError(attachmentErrorMessage);
+          setSuccess(null); // Clear success message if attachments failed
+          return; // Stop execution to show the error
         }
       }
       

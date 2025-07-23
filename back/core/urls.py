@@ -3,13 +3,14 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     PeopleHistoryViewSet, CompaniesHistoryViewSet, EmploymentHistoryViewSet,
     FamilyRelationshipsViewSet, CorrespondenceTypesViewSet, ContactsViewSet,
-    CorrespondenceViewSet, CorrespondenceContactsViewSet, AttachmentsViewSet,
+    CorrespondenceViewSet, CorrespondenceContactsViewSet,
     PermitsViewSet, ApprovalDecisionsViewSet, AccidentsViewSet,
     RelocationViewSet, RelocationPeriodViewSet, VehicleViewSet,
     CarPermitViewSet, CardPermitsViewSet, CardPhotosViewSet, SettingsViewSet,
     CorrespondenceTypeProcedureViewSet, CorrespondenceStatusLogViewSet, 
     parse_pdf_content, parse_filename, process_msg_file
 )
+from .viewsets import AttachmentsViewSet
 from .auth_views import (
     LoginView, LogoutView, UserProfileView, ChangePasswordView,
     UserPermissionsView, UserManagementView, UserDetailView,

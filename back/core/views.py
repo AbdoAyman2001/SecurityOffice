@@ -1,7 +1,9 @@
 from rest_framework import viewsets, filters, status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.response import Response
+from django.http import FileResponse
 from django_filters.rest_framework import DjangoFilterBackend
 from django.core.files.base import ContentFile
 import os
@@ -97,12 +99,7 @@ class CorrespondenceContactsViewSet(viewsets.ModelViewSet):
     filterset_fields = ['role']
 
 
-class AttachmentsViewSet(viewsets.ModelViewSet):
-    queryset = Attachments.objects.all()
-    serializer_class = AttachmentsSerializer
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['file_type']
-    search_fields = ['file_name']
+
 
 
 class CorrespondenceTypeProcedureViewSet(viewsets.ModelViewSet):
@@ -229,7 +226,7 @@ class SettingsViewSet(viewsets.ModelViewSet):
 def parse_pdf_content(request):
     """
     Parse PDF file content to extract Russian letter reference number and date.
-    Extracts information directly from the PDF document content.
+    Uses region-based extraction with PyMuPDF for high accuracy.
     """
     if 'file' not in request.FILES:
         return Response(
@@ -247,83 +244,147 @@ def parse_pdf_content(request):
         )
     
     try:
-        import PyPDF2
+        import fitz  # PyMuPDF
         from io import BytesIO
         from datetime import datetime
         
-        # Read PDF content
+        # Read PDF content into memory
         pdf_content = BytesIO(pdf_file.read())
-        pdf_reader = PyPDF2.PdfReader(pdf_content)
         
-        # Extract text from first page (where reference and date are typically located)
-        if len(pdf_reader.pages) == 0:
+        # Open PDF document
+        doc = fitz.open(stream=pdf_content, filetype="pdf")
+        
+        if len(doc) == 0:
+            doc.close()
             return Response({
                 'success': True,
                 'parsed': False,
                 'message': 'PDF file appears to be empty'
             }, status=status.HTTP_200_OK)
         
-        first_page = pdf_reader.pages[0]
-        text = first_page.extract_text()
+        # Get first page
+        page = doc[0]
+        page_rect = page.rect
         
-        # Split text into lines for processing
-        lines = text.split('\n')
+        # Define relative coordinates for letter data region (based on your working script)
+        # These percentages work universally across different PDF sizes
+        letter_x1_percent, letter_y1_percent = 0.234, 0.159  # 23.4%, 15.9%
+        letter_x2_percent, letter_y2_percent = 0.376, 0.193  # 37.6%, 19.3%
         
-        # Look for reference number pattern in the first few lines
-        # Russian letters typically have reference like: "رقم: 123/ABC/2025" or "Ref: 123/ABC/2025"
+        # Define relative coordinates for Block 8 (subject/vehicle info)
+        # Block 8 coordinates: (70.9,276.3) to (496.6,291.8) on 595x842 PDF
+        block8_x1_percent, block8_y1_percent = 0.119, 0.328  # 11.9%, 32.8%
+        block8_x2_percent, block8_y2_percent = 0.95, 0.347  # 83.4%, 34.7%
+        
+        # Calculate absolute coordinates for current PDF
+        letter_x1 = letter_x1_percent * page_rect.width
+        letter_y1 = letter_y1_percent * page_rect.height
+        letter_x2 = letter_x2_percent * page_rect.width
+        letter_y2 = letter_y2_percent * page_rect.height
+        
+        block8_x1 = block8_x1_percent * page_rect.width
+        block8_y1 = block8_y1_percent * page_rect.height
+        block8_x2 = block8_x2_percent * page_rect.width
+        block8_y2 = block8_y2_percent * page_rect.height
+        
+        # Extract text from the letter data region
+        rect = fitz.Rect(letter_x1, letter_y1, letter_x2, letter_y2)
+        region_text = page.get_text("text", clip=rect).strip()
+        
+        # Extract text from Block 8 (subject info) - enhanced for multi-line extraction
+        block8_rect = fitz.Rect(block8_x1, block8_y1, block8_x2, block8_y2)
+        block8_text = page.get_text("text", clip=block8_rect).strip()
+        
+        # Check for additional text blocks within 15 pixels below Block 8 for multi-line subjects
+        additional_subject_text = ""
+        search_height = 15  # pixels to search below Block 8
+        
+        # Define extended search area (15px below Block 8)
+        extended_y1 = block8_y2  # Start from bottom of Block 8
+        extended_y2 = block8_y2 + search_height  # Search 15px below
+        extended_rect = fitz.Rect(block8_x1, extended_y1, block8_x2, extended_y2)
+        
+        # Extract text from the extended area
+        extended_text = page.get_text("text", clip=extended_rect).strip()
+        
+        if extended_text:
+            # Clean and append the extended text
+            additional_subject_text = extended_text.strip().replace('\n', ' ').replace('\r', ' ')
+            additional_subject_text = ' '.join(additional_subject_text.split())  # Remove extra whitespace
+            
+        # Combine Block 8 text with any additional text found below
+        if block8_text and additional_subject_text:
+            # Combine with a space separator
+            full_block8_text = f"{block8_text} {additional_subject_text}"
+        elif additional_subject_text:
+            # Only additional text found
+            full_block8_text = additional_subject_text
+        else:
+            # Only main Block 8 text
+            full_block8_text = block8_text
+            
+        # Use the combined text as the final block8_text
+        block8_text = full_block8_text
+        
+        # Split into paragraphs/lines
+        paragraphs = [p.strip() for p in region_text.split('\n') if p.strip()]
+        
         reference_number = None
         correspondence_date = None
+        subject = None
         
-        # Search for reference number patterns
-        ref_patterns = [
-            r'(?:رقم|Ref|Reference|REF)\s*:?\s*([A-Z0-9/\-]+)',  # Arabic "رقم" or English "Ref"
-            r'([A-Z0-9]+/[A-Z0-9/\-]+)',  # Pattern like "123/ABC/2025"
-            r'No\.?\s*([A-Z0-9/\-]+)',  # "No. 123/ABC"
-        ]
-        
-        # Search for date patterns
-        date_patterns = [
-            r'(?:تاريخ|Date|DATE)\s*:?\s*(\d{1,2}[/\-]\d{1,2}[/\-]\d{4})',  # Arabic "تاريخ" or English "Date"
-            r'(\d{1,2}[/\-]\d{1,2}[/\-]\d{4})',  # Direct date pattern
-            r'(\d{4}[/\-]\d{1,2}[/\-]\d{1,2})',  # ISO date pattern
-        ]
-        
-        # Process first 10 lines (header area)
-        for i, line in enumerate(lines[:10]):
-            line = line.strip()
-            if not line:
-                continue
-                
-            # Try to find reference number
-            if not reference_number:
-                for pattern in ref_patterns:
-                    match = re.search(pattern, line, re.IGNORECASE)
-                    if match:
-                        reference_number = match.group(1).strip()
-                        break
+        # Process extracted paragraphs
+        if len(paragraphs) >= 1:
+            # First paragraph typically contains the reference number
+            ref_text = paragraphs[0]
+            # Clean and extract reference number
+            reference_number = ref_text.strip()
             
-            # Try to find date
-            if not correspondence_date:
+        if len(paragraphs) >= 2:
+            # Second paragraph typically contains the date
+            date_text = paragraphs[1]
+            
+            # Try to parse the date from various formats
+            date_patterns = [
+                r'(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{4})',  # DD/MM/YYYY, DD-MM-YYYY, or DD.MM.YYYY
+                r'(\d{4}[/\-\.]\d{1,2}[/\-\.]\d{1,2})',  # YYYY/MM/DD, YYYY-MM-DD, or YYYY.MM.YYYY
+                r'(\d{1,2}\s+\w+\s+\d{4})',  # DD Month YYYY
+            ]
+            
+            # First try to parse the entire date_text as a date (common case)
+            try:
+                # Check if the date_text is already in a date format (like "22.07.2025")
+                if re.match(r'^\d{1,2}[.\-/]\d{1,2}[.\-/]\d{4}$', date_text):
+                    # Determine separator (., -, or /)
+                    separator = '.' if '.' in date_text else ('/' if '/' in date_text else '-')
+                    parts = date_text.split(separator)
+                    
+                    if len(parts) == 3:
+                        # Assume DD.MM.YYYY format (common for Russian letters)
+                        day, month, year = parts
+                        parsed_date = datetime(int(year), int(month), int(day))
+                        correspondence_date = parsed_date.strftime('%Y-%m-%d')
+            except (ValueError, IndexError):
+                # If direct parsing fails, try pattern matching
                 for pattern in date_patterns:
-                    match = re.search(pattern, line, re.IGNORECASE)
+                    match = re.search(pattern, date_text)
                     if match:
                         date_str = match.group(1).strip()
-                        # Try to parse the date
                         try:
-                            # Handle different date formats
-                            if '/' in date_str:
-                                parts = date_str.split('/')
-                            elif '-' in date_str:
-                                parts = date_str.split('-')
-                            else:
-                                continue
+                            # Handle different date formats with different separators
+                            separator = None
+                            for sep in ['.', '/', '-']:
+                                if sep in date_str:
+                                    separator = sep
+                                    break
+                                    
+                            if separator and len(date_str.split(separator)) == 3:
+                                parts = date_str.split(separator)
                                 
-                            if len(parts) == 3:
                                 # Determine date format
-                                if len(parts[0]) == 4:  # YYYY/MM/DD or YYYY-MM-DD
+                                if len(parts[0]) == 4:  # YYYY/MM/DD
                                     year, month, day = parts
-                                else:  # DD/MM/YYYY or MM/DD/YYYY
-                                    # Assume DD/MM/YYYY for Russian letters
+                                else:  # DD/MM/YYYY (most common for Russian letters)
                                     day, month, year = parts
                                 
                                 # Validate and format
@@ -333,34 +394,119 @@ def parse_pdf_content(request):
                         except (ValueError, IndexError):
                             continue
         
+        # Close the document
+        doc.close()
+        
+        # If region extraction didn't work, try fallback full-page extraction
+        if not reference_number and not correspondence_date:
+            # Fallback: extract from full page and use pattern matching
+            doc = fitz.open(stream=BytesIO(pdf_file.read()), filetype="pdf")
+            page = doc[0]
+            full_text = page.get_text("text")
+            lines = full_text.split('\n')
+            
+            # Search for reference number patterns in full text
+            ref_patterns = [
+                r'(?:رقم|Ref|Reference|REF|No\.?)\s*:?\s*([A-Z0-9/\-]+)',
+                r'([A-Z0-9]+/[A-Z0-9/\-]+)',  # Direct pattern like "123/ABC/2025"
+            ]
+            
+            # Search for date patterns in full text
+            date_patterns = [
+                r'(?:تاريخ|Date|DATE)\s*:?\s*(\d{1,2}[/\-]\d{1,2}[/\-]\d{4})',
+                r'(\d{1,2}[/\-]\d{1,2}[/\-]\d{4})',
+            ]
+            
+            # Process first 15 lines for patterns
+            for line in lines[:15]:
+                line = line.strip()
+                if not line:
+                    continue
+                    
+                # Try to find reference number
+                if not reference_number:
+                    for pattern in ref_patterns:
+                        match = re.search(pattern, line, re.IGNORECASE)
+                        if match:
+                            reference_number = match.group(1).strip()
+                            break
+                
+                # Try to find date
+                if not correspondence_date:
+                    for pattern in date_patterns:
+                        match = re.search(pattern, line, re.IGNORECASE)
+                        if match:
+                            date_str = match.group(1).strip()
+                            try:
+                                parts = date_str.replace('-', '/').split('/')
+                                if len(parts) == 3:
+                                    if len(parts[0]) == 4:
+                                        year, month, day = parts
+                                    else:
+                                        day, month, year = parts
+                                    
+                                    parsed_date = datetime(int(year), int(month), int(day))
+                                    correspondence_date = parsed_date.strftime('%Y-%m-%d')
+                                    break
+                            except (ValueError, IndexError):
+                                continue
+            
+            doc.close()
+        
+        # Extract subject from Block 8 text
+        if block8_text:
+            # Clean up the extracted text and use it as subject
+            subject = block8_text.strip().replace('\n', ' ').replace('\r', ' ')
+            # Remove extra whitespace
+            subject = ' '.join(subject.split())
+        
         # Determine parsing success and confidence
-        if reference_number or correspondence_date:
-            confidence = 'high' if (reference_number and correspondence_date) else 'medium'
+        if reference_number or correspondence_date or subject:
+            confidence = 'high' if (reference_number and correspondence_date and subject) else 'medium'
+            extraction_method = 'region_based' if paragraphs else 'pattern_matching'
             
             return Response({
                 'success': True,
                 'parsed': True,
-                'method': 'pdf_content_extraction',
+                'method': f'pdf_content_extraction_{extraction_method}',
                 'data': {
                     'reference_number': reference_number,
                     'correspondence_date': correspondence_date,
+                    'subject': subject,
                     'confidence': confidence,
-                    'extracted_from': 'pdf_content'
+                    'extracted_from': 'pdf_content',
+                    'extraction_method': extraction_method
+                },
+                'debug_info': {
+                    'region_paragraphs': paragraphs[:5] if paragraphs else [],
+                    'block8_text': block8_text,
+                    'block8_main_text': page.get_text("text", clip=block8_rect).strip(),
+                    'block8_extended_text': additional_subject_text,
+                    'pdf_dimensions': f'{page_rect.width}x{page_rect.height}',
+                    'correspondence_date': correspondence_date
                 }
             }, status=status.HTTP_200_OK)
         else:
             return Response({
                 'success': True,
                 'parsed': False,
-                'message': 'No reference number or date found in PDF content',
+                'message': 'No reference number, date, or subject found in PDF content',
                 'debug_info': {
-                    'first_10_lines': lines[:10] if len(lines) >= 10 else lines
+                    'region_paragraphs': paragraphs[:5] if paragraphs else [],
+                    'block8_text': block8_text,
+                    'block8_main_text': page.get_text("text", clip=block8_rect).strip() if 'block8_rect' in locals() else '',
+                    'block8_extended_text': additional_subject_text if 'additional_subject_text' in locals() else '',
+                    'pdf_dimensions': f'{page_rect.width}x{page_rect.height}',
+                    'region_coordinates': f'({letter_x1:.1f},{letter_y1:.1f}) to ({letter_x2:.1f},{letter_y2:.1f})',
+                    'block8_coordinates': f'({block8_x1:.1f},{block8_y1:.1f}) to ({block8_x2:.1f},{block8_y2:.1f})',
+                    'block8_extended_coordinates': f'({block8_x1:.1f},{extended_y1:.1f}) to ({block8_x2:.1f},{extended_y2:.1f})',
+                    'correspondence_date': correspondence_date
                 }
             }, status=status.HTTP_200_OK)
             
     except ImportError:
         return Response(
-            {'error': 'PyPDF2 library is not installed. Please install it to process PDF files.'}, 
+            {'error': 'PyMuPDF (fitz) library is not installed. Please install it to process PDF files.'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
     except Exception as e:
