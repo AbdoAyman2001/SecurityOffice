@@ -129,6 +129,7 @@ const RussianLetterForm = () => {
             handleInputChange={handleInputChange}
             correspondenceTypes={correspondenceTypes}
             contacts={contacts}
+            procedures={procedures}
           />
 
           {/* Parent Correspondence Field */}

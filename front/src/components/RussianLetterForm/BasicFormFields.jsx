@@ -13,7 +13,8 @@ const BasicFormFields = ({
   formData, 
   handleInputChange, 
   correspondenceTypes,
-  contacts 
+  contacts,
+  procedures 
 }) => {
   return (
     <>
@@ -127,6 +128,25 @@ const BasicFormFields = ({
           variant="outlined"
         />
       </Box>
+
+      {/* Hidden Status Field - Automatically set to initial status of selected type */}
+      <FormControl fullWidth sx={{ display: 'none' }}>
+        <InputLabel>الحالة</InputLabel>
+        <Select
+          value={formData.current_status || ''}
+          onChange={(e) => handleInputChange('current_status', e.target.value)}
+          label="الحالة"
+        >
+          {procedures
+            .filter(proc => proc.correspondence_type === formData.type && proc.is_initial)
+            .map((procedure) => (
+              <MenuItem key={procedure.id} value={procedure.id}>
+                {procedure.procedure_name}
+              </MenuItem>
+            ))
+          }
+        </Select>
+      </FormControl>
     </>
   );
 };

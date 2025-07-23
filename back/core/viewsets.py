@@ -189,19 +189,24 @@ class CorrespondenceViewSet(viewsets.ModelViewSet):
                 except Contacts.DoesNotExist:
                     print(f"Warning: Contact with ID {contact_id} not found")
                     # Continue without failing the entire operation
+                    pass
                 except Exception as e:
-                    print(f"Error creating correspondence contact: {e}")
                     # Continue without failing the entire operation
+                    pass
             
             # Create initial status log entry if user is authenticated and status exists
             if correspondence.current_status and request.user.is_authenticated:
-                CorrespondenceStatusLog.objects.create(
-                    correspondence=correspondence,
-                    from_status=None,  # Initial status
-                    to_status=correspondence.current_status,
-                    changed_by=request.user,
-                    change_reason='Initial correspondence creation'
-                )
+                try:
+                    CorrespondenceStatusLog.objects.create(
+                        correspondence=correspondence,
+                        from_status=None,  # Initial status
+                        to_status=correspondence.current_status,
+                        changed_by=request.user,
+                        change_reason='Initial correspondence creation'
+                    )
+                except Exception as e:
+                    # Continue without failing the entire operation
+                    pass
             
             # Return the created correspondence with all related data
             headers = self.get_success_headers(serializer.data)

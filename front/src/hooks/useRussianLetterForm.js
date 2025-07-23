@@ -97,7 +97,7 @@ export const useRussianLetterForm = () => {
         );
         console.log('Found initial procedure:', initialProcedure);
         if (initialProcedure) {
-          newData.current_status = initialProcedure.procedure_id;
+          newData.current_status = initialProcedure.id; // Use 'id' not 'procedure_id'
         }
       }
       
