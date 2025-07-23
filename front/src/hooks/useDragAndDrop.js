@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { processFiles, analyzeAttachmentsAndAutoFill } from '../utils/fileUtils';
 
-export const useDragAndDrop = (formData, setFormData, setDragActive) => {
+export const useDragAndDrop = (formData, setFormData, setDragActive,resetForm) => {
   
   // Process .msg files by sending them to backend for attachment extraction
   const processMsgFiles = useCallback(async (msgFiles, setFormData) => {
@@ -99,6 +99,7 @@ export const useDragAndDrop = (formData, setFormData, setDragActive) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
+    resetForm();
     
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFiles(Array.from(e.dataTransfer.files));

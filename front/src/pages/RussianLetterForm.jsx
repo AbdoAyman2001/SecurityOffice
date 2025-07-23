@@ -39,13 +39,14 @@ const RussianLetterForm = () => {
     setDragActive,
     setParentSearchTerm,
     filteredCorrespondences,
+    resetForm,
     setFormData
   } = useRussianLetterForm();
 
   const {
     handleFiles,
     removeAttachment
-  } = useDragAndDrop(formData, setFormData, setDragActive);
+  } = useDragAndDrop(formData, setFormData, setDragActive,resetForm);
 
   // Check permissions
   if (!hasPermission) {

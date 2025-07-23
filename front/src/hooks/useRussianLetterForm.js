@@ -8,6 +8,7 @@ import {
   attachmentsApi
 } from '../services/apiService';
 import { useAuth } from '../contexts/AuthContext';
+import { parseDRFError, parseAttachmentError } from '../utils/errorHandling';
 
 export const useRussianLetterForm = () => {
   const navigate = useNavigate();
@@ -73,7 +74,9 @@ export const useRussianLetterForm = () => {
       }
     } catch (err) {
       console.error('Error fetching data:', err);
-      setError('فشل في تحميل البيانات المطلوبة. يرجى المحاولة مرة أخرى.');
+      // Use comprehensive DRF error parsing for data fetching errors
+      const errorMessage = parseDRFError(err);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -174,10 +177,8 @@ export const useRussianLetterForm = () => {
           console.log('Attachments uploaded successfully:', uploadResponse.data);
         } catch (attachmentError) {
           console.error('Error uploading attachments:', attachmentError);
-          // Surface attachment upload errors to the user
-          const attachmentErrorMessage = attachmentError.response?.data?.error || 
-                                       attachmentError.response?.data?.message || 
-                                       'فشل في رفع المرفقات. تم حفظ الخطاب ولكن لم يتم رفع المرفقات.';
+          // Use comprehensive error parsing for attachment errors
+          const attachmentErrorMessage = parseAttachmentError(attachmentError);
           setError(attachmentErrorMessage);
           setSuccess(null); // Clear success message if attachments failed
           return; // Stop execution to show the error
@@ -191,9 +192,8 @@ export const useRussianLetterForm = () => {
       
     } catch (err) {
       console.error('Error submitting form:', err);
-      const errorMessage = err.response?.data?.detail || 
-                          err.response?.data?.message || 
-                          'فشل في حفظ الخطاب. يرجى المحاولة مرة أخرى.';
+      // Use comprehensive DRF error parsing
+      const errorMessage = parseDRFError(err);
       setError(errorMessage);
     } finally {
       setSubmitting(false);
