@@ -99,14 +99,14 @@ const RussianLetterForm = () => {
       )}
 
       {/* Page Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
         <MailIcon sx={{ mr: 2, fontSize: 32, color: 'primary.main' }} />
-        <Typography variant="h4" component="h1">
-          إضافة خطاب روسي جديد
+        <Typography variant="h5" component="h1">
+          إضافة خطاب جديد
         </Typography>
       </Box>
 
-      <Divider sx={{ mb: 3 }} />
+      <Divider sx={{ mb: 1 }} />
 
       <Paper elevation={3} sx={{ p: 4 }}>
         <form onSubmit={handleSubmit}>

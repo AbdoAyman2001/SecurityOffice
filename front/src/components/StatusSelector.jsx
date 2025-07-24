@@ -286,7 +286,7 @@ const StatusSelector = ({
           {selectedStatus && (
             <>
               <Alert severity="info" sx={{ mb: 2 }}>
-                سيتم تغيير حالة المراسلة إلى: <strong>{selectedStatus.procedure_name}</strong>
+                سيتم تغيير حالة الخطاب إلى: <strong>{selectedStatus.procedure_name}</strong>
               </Alert>
               
               <TextField

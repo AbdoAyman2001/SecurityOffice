@@ -58,7 +58,7 @@ const BasicFormFields = ({
             label={FORM_LABELS.type}
           >
             {correspondenceTypes.map((type) => {
-              console.log('Rendering type option:', type);
+              // console.log('Rendering type option:', type);
               return (
                 <MenuItem key={type.type_id} value={type.correspondence_type_id}>
                   {type.type_name}

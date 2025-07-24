@@ -31,51 +31,51 @@ import { useAuth } from '../contexts/AuthContext';
 const drawerWidth = 240;
 
 const menuItems = [
-  {
-    text: 'لوحة التحكم',
-    icon: <DashboardIcon />,
-    path: '/',
-  },
-  {
-    text: 'افراد',
-    icon: <PeopleIcon />,
-    path: '/people',
-  },
-  {
-    text: 'مكاتبات',
-    icon: <MailIcon />,
-    path: '/correspondence',
-  },
+  // {
+  //   text: 'لوحة التحكم',
+  //   icon: <DashboardIcon />,
+  //   path: '/',
+  // },
+  // {
+  //   text: 'افراد',
+  //   icon: <PeopleIcon />,
+  //   path: '/people',
+  // },
+  // {
+  //   text: 'مكاتبات',
+  //   icon: <MailIcon />,
+  //   path: '/correspondence',
+  // },
   {
     text: 'الخطابات',
     icon: <MailIcon />,
     path: '/russian-letters',
   },
-  {
-    text: 'التصاريح',
-    icon: <AssignmentIcon />,
-    path: '/permits',
-  },
-  {
-    text: 'مركبات',
-    icon: <CarIcon />,
-    path: '/vehicles',
-  },
-  {
-    text: 'كروت مؤمنة',
-    icon: <CardIcon />,
-    path: '/cards',
-  },
-  {
-    text: 'حوادث وإصابات',
-    icon: <AccidentIcon />,
-    path: '/accidents',
-  },
-  {
-    text: 'تسكين',
-    icon: <RelocationIcon />,
-    path: '/relocation',
-  },
+  // {
+  //   text: 'التصاريح',
+  //   icon: <AssignmentIcon />,
+  //   path: '/permits',
+  // },
+  // {
+  //   text: 'مركبات',
+  //   icon: <CarIcon />,
+  //   path: '/vehicles',
+  // },
+  // {
+  //   text: 'كروت مؤمنة',
+  //   icon: <CardIcon />,
+  //   path: '/cards',
+  // },
+  // {
+  //   text: 'حوادث وإصابات',
+  //   icon: <AccidentIcon />,
+  //   path: '/accidents',
+  // },
+  // {
+  //   text: 'تسكين',
+  //   icon: <RelocationIcon />,
+  //   path: '/relocation',
+  // },
 ];
 
 const formsMenuItems = [
@@ -84,34 +84,34 @@ const formsMenuItems = [
     icon: <MailIcon />,
     path: '/forms/russian-letter',
   },
-  {
-    text: 'إضافة مكاتبة جديدة',
-    icon: <MailIcon />,
-    path: '/forms/new-correspondence',
-  },
-  {
-    text: 'نموذج طلب تصريح',
-    icon: <PermitFormIcon />,
-    path: '/forms/permit-request',
-  },
-  {
-    text: 'نموذج إضافة شخص',
-    icon: <PersonFormIcon />,
-    path: '/forms/person-form',
-  },
-  {
-    text: 'نموذج تسجيل حادث',
-    icon: <AccidentIcon />,
-    path: '/forms/accident-form',
-  },
+  // {
+  //   text: 'إضافة مكاتبة جديدة',
+  //   icon: <MailIcon />,
+  //   path: '/forms/new-correspondence',
+  // },
+  // {
+  //   text: 'نموذج طلب تصريح',
+  //   icon: <PermitFormIcon />,
+  //   path: '/forms/permit-request',
+  // },
+  // {
+  //   text: 'نموذج إضافة شخص',
+  //   icon: <PersonFormIcon />,
+  //   path: '/forms/person-form',
+  // },
+  // {
+  //   text: 'نموذج تسجيل حادث',
+  //   icon: <AccidentIcon />,
+  //   path: '/forms/accident-form',
+  // },
 ];
 
 const adminMenuItems = [
-  {
-    text: 'إعدادات النظام',
-    icon: <SettingsIcon />,
-    path: '/settings',
-  },
+  // {
+  //   text: 'إعدادات النظام',
+  //   icon: <SettingsIcon />,
+  //   path: '/settings',
+  // },
   {
     text: 'إعدادات الخطابات',
     icon: <ConfigIcon />,
@@ -226,10 +226,10 @@ const Sidebar = ({ open, onClose }) => {
       {isAdmin() && (
         <>
           <Divider />
-          <Box sx={{ p: 2, backgroundColor: 'rgba(220, 0, 78, 0.05)' }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: 'secondary.main', mb: 1 }}>
+          <Box sx={{ p: 1, backgroundColor: 'rgba(220, 0, 78, 0.05)' }}>
+            <Typography variant="subtitle2" mb={0} sx={{ fontWeight: 'bold', margin: 0,color: 'secondary.main', mb: 1 }}>
               <SettingsIcon sx={{ mr: 1, fontSize: 16 }} />
-              إعدادات المدير
+              إعدادات
             </Typography>
           </Box>
           

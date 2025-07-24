@@ -65,77 +65,113 @@ Table Companies {
 // |
 // |
 //______________________________________ CORRESPONDENCE _____________________________________
-Table Correspondence {
-  CorrespondenceId int [pk, increment]
-  ParentCorrespondenceId int [ref: > Correspondence.CorrespondenceId]
-  ReferenceNumber varchar(255) 
-  CorrespondenceDate date
-  Type int [ref: > CorrespondenceTypes.CorrespondenceTypeId]
-  Subject varchar(255)
-  Direction varchar(255) [note:'the flow of the correspondence, Incoming, Outgoing and Internal']
-  Priority enum("high", 'normal', 'low')
-  Summary varchar(1000)
-  CurrentStatus int [ref: > CorrespondenceTypeProcedure.ProcedureId, note:'Current status of the correspondence']
-  AssignedTo int [ref: > Users.userId, note:'User assigned to handle this correspondence']
-  CreatedAt timestamp [default: `now()`]
-  UpdatedAt timestamp [default: `now()`]
-}
-
-Table CorrespondenceContacts{
-  ContactId int [ref: > Contacts.ContactId]
-  CorrespondenceId int [ref: > Correspondence.CorrespondenceId]
-  Role enum('Sender','Recipient','CC','BCC')
-
-  indexes {
-    (CorrespondenceId, ContactId, Role) [pk]
-  }
-} 
-
-Table Attachments { 
-  AttachmentId int [pk, increment]
-  CorrespondenceId int [ref: > Correspondence.CorrespondenceId]
-  File varchar(500) [not null, note:'FileField path to uploaded file']
-  FileName varchar(255) [not null, note:'Original filename']
-  FileType varchar(100) [note:'mime type']
-  FileSize bigint [note:'File size in bytes']
-  UploadedAt timestamp [default: `now()`]
-}
-
-Table CorrespondenceTypes { 
-  CorrespondenceTypeId int [pk, increment]
-  TypeName varchar(255)
+Table CorrespondenceTypes {
+  correspondence_type_id serial [pk]
+  type_name varchar(255)
+  category varchar(50) [note: 'General, Russian']
+  
+  Note: 'Types of correspondence'
 }
 
 Table CorrespondenceTypeProcedure {
-  ProcedureId int [pk, increment]
-  CorrespondenceType int [ref: > CorrespondenceTypes.CorrespondenceTypeId]
-  ProcedureName varchar(255) [not null]
-  IsInitial boolean [default: false, note:'True if this is the initial status for new correspondence']
-  IsFinal boolean [default: false, note:'True if this is a final status']
-  OrderIndex int [note:'Order of this procedure in the workflow']
+  id serial [pk]
+  correspondence_type_id int [not null]
+  procedure_name varchar(255) [not null, note: 'Name of the procedure/status step']
+  procedure_order int [default: 0, note: 'Order of this procedure in the workflow']
+  is_initial boolean [default: false, note: 'True if this is the initial status']
+  is_final boolean [default: false, note: 'True if this is a final status']
+  description text [note: 'Description of what happens in this procedure']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  Indexes {
+    (correspondence_type_id, procedure_name) [unique]
+  }
+  
+  Note: 'Procedures/statuses for each correspondence type'
+}
+
+Table Contacts {
+  contact_id serial [pk]
+  name varchar(255)
+  contact_type varchar(50) [default: 'Person', note: 'Specifies if the contact is an individual or an official body.']
+  is_approver boolean [default: false, note: 'True if this contact (must be an Organization) has the authority to approve permits.']
+  
+  Note: 'Contacts for correspondence'
+}
+
+Table Correspondence {
+  correspondence_id serial [pk]
+  parent_correspondence_id int [null, note: 'Self-referencing foreign key for related correspondence']
+  reference_number varchar(255)
+  contact int 
+  correspondence_date date
+  type_id int [null, note: 'Foreign key to CorrespondenceTypes']
+  subject varchar(255)
+  direction varchar(50) [note: 'Incoming, Outgoing, Internal; the flow of the correspondence']
+  priority varchar(10) [default: 'normal', note: 'high, normal, low']
+  summary varchar(1000)
+  current_status_id int [null, note: 'Foreign key to CorrespondenceTypeProcedure; Current status/procedure of this correspondence']
+  assigned_to_id int [null, note: 'Foreign key to Django Auth User model']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  Indexes {
+    (reference_number, correspondence_date) [unique]
+  }
+  
+  Note: 'Main correspondence table'
 }
 
 Table CorrespondenceStatusLog {
-  Id int [pk, increment]
-  CorrespondenceId int [ref: > Correspondence.CorrespondenceId]
-  FromStatus int [ref: > CorrespondenceTypeProcedure.ProcedureId, note:'Previous status (null for initial)']
-  ToStatus int [ref: > CorrespondenceTypeProcedure.ProcedureId, note:'New status']
-  ChangedBy int [ref: > Users.userId, note:'User who made the change']
-  ChangeReason text [note:'Optional reason for the status change']
-  CreatedAt timestamp [default: `now()`]
+  id serial [pk]
+  correspondence_id int [not null]
+  form_status_name varchar(200)
+  to_status_name varchar(200)
+  changed_by_id int [null, note: 'Foreign key to Django Auth User model']
+  change_reason text [note: 'Optional reason for the status change']
+  created_at timestamp [default: `now()`]
+  
+  Note: 'Log of status changes for correspondence tracking'
 }
-Table Contacts {
-  ContactId int [pk, increment]
-  Name varchar(255) [not null]
-  ContactType enum('Person', 'Organization') [not null, default: 'Person', note: 'Specifies if the contact is an individual or an official body.']
-  IsApprover boolean [not null, default: false, note: 'True if this contact (must be an Organization) has the authority to approve permits.']
+
+Table Attachments {
+  attachment_id serial [pk]
+  correspondence_id int [not null]
+  file varchar(255) [note: 'Path to uploaded file']
+  file_name varchar(255) [note: 'Original filename']
+  file_type varchar(100) [note: 'MIME type']
+  file_size bigint [note: 'File size in bytes']
+  uploaded_at timestamp [default: `now()`]
+  
+  Note: 'File attachments for correspondence'
 }
-Table Users { 
-  userId int [pk, increment]
-  username varchar(200)
-  password varchar(200)
+
+// Assuming settings.AUTH_USER_MODEL maps to a 'users' or 'auth_user' table
+// Adjust 'auth_user' if your custom user model has a different table name
+Table auth_user {
+  id serial [pk]
+  username varchar(150) [unique]
+  // ... other user fields
+  Note: 'Django Auth User Model'
 }
-//___________________________________________________________________________________________
+
+// Relationships
+Ref: CorrespondenceTypeProcedure.correspondence_type_id > CorrespondenceTypes.correspondence_type_id [delete: cascade]
+Ref: Correspondence.type_id > CorrespondenceTypes.correspondence_type_id [delete: restrict]
+Ref: Correspondence.current_status_id > CorrespondenceTypeProcedure.id [delete: restrict]
+Ref: Correspondence.parent_correspondence_id > Correspondence.correspondence_id [delete: set null]
+Ref: Contacts.contact_id < Correspondence.contact [delete: restrict]
+
+Ref: CorrespondenceStatusLog.correspondence_id > Correspondence.correspondence_id [delete: cascade]
+Ref: Attachments.correspondence_id > Correspondence.correspondence_id [delete: cascade]
+
+// but we will use the soft delete method so that the deletion is forbidden but the 
+// if the admin tried to delete some user we will make it soft delete
+Ref: Correspondence.assigned_to_id > auth_user.id [delete: restrict]
+Ref: CorrespondenceStatusLog.changed_by_id > auth_user.id [delete: restrict]
+
+// ___________________________________________________________________________________________
 // |
 // |
 // |

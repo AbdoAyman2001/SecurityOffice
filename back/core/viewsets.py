@@ -7,7 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
 from .models import (
     PeopleHistory, CompaniesHistory, EmploymentHistory, FamilyRelationships,
-    CorrespondenceTypes, Contacts, Correspondence, CorrespondenceContacts,
+    CorrespondenceTypes, Contacts, Correspondence,
     Attachments, CorrespondenceStatusLog, Permits, ApprovalDecisions,
     Accidents, Relocation, RelocationPeriod, Vehicle, CarPermit,
     CardPermits, CardPhotos
@@ -16,7 +16,7 @@ from .serializers import (
     UserSerializer, PeopleHistorySerializer, CompaniesHistorySerializer,
     EmploymentHistorySerializer, FamilyRelationshipsSerializer,
     CorrespondenceTypesSerializer, ContactsSerializer, CorrespondenceSerializer,
-    CorrespondenceContactsSerializer, AttachmentsSerializer,
+    AttachmentsSerializer,
     PermitsSerializer, ApprovalDecisionsSerializer,
     AccidentsSerializer, RelocationSerializer, RelocationPeriodSerializer,
     VehicleSerializer, CarPermitSerializer, CardPermitsSerializer, CardPhotosSerializer,
@@ -168,39 +168,16 @@ class CorrespondenceViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             correspondence = serializer.save()
             
-            # Create contact relationship if provided
-            if contact_id:
-                try:
-                    # Try to get the contact by ID (could be contact_id or id field)
-                    try:
-                        contact = Contacts.objects.get(contact_id=contact_id)
-                    except Contacts.DoesNotExist:
-                        # Fallback to id field if contact_id doesn't work
-                        contact = Contacts.objects.get(id=contact_id)
-                    
-                    # Create the correspondence contact relationship
-                    correspondence_contact = CorrespondenceContacts.objects.create(
-                        correspondence=correspondence,
-                        contact=contact,
-                        role='Sender'  # Default role for Russian letters
-                    )
-                    print(f"Successfully created correspondence contact: {correspondence_contact}")
-                    
-                except Contacts.DoesNotExist:
-                    print(f"Warning: Contact with ID {contact_id} not found")
-                    # Continue without failing the entire operation
-                    pass
-                except Exception as e:
-                    # Continue without failing the entire operation
-                    pass
+            # Contact is now handled directly in the correspondence model
+            # No need to create separate correspondence_contact records
             
             # Create initial status log entry if user is authenticated and status exists
             if correspondence.current_status and request.user.is_authenticated:
                 try:
                     CorrespondenceStatusLog.objects.create(
                         correspondence=correspondence,
-                        from_status=None,  # Initial status
-                        to_status=correspondence.current_status,
+                        form_status_name=None,  # Initial status
+                        to_status_name=correspondence.current_status.procedure_name if correspondence.current_status else None,
                         changed_by=request.user,
                         change_reason='Initial correspondence creation'
                     )
@@ -231,12 +208,7 @@ class CorrespondenceViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class CorrespondenceContactsViewSet(viewsets.ModelViewSet):
-    queryset = CorrespondenceContacts.objects.all()
-    serializer_class = CorrespondenceContactsSerializer
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['role', 'correspondence', 'contact']
-    ordering = ['correspondence', 'role']
+
 
 
 class AttachmentsViewSet(viewsets.ModelViewSet):

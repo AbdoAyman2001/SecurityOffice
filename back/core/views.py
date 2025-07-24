@@ -16,7 +16,7 @@ import mimetypes
 import re
 from .models import (
     PeopleHistory, CompaniesHistory, EmploymentHistory, FamilyRelationships,
-    CorrespondenceTypes, Contacts, Correspondence, CorrespondenceContacts,
+    CorrespondenceTypes, Contacts, Correspondence,
     Attachments, Permits, ApprovalDecisions,
     Accidents, Relocation, RelocationPeriod, Vehicle, CarPermit,
     CardPermits, CardPhotos, Settings, CorrespondenceTypeProcedure, CorrespondenceStatusLog
@@ -24,7 +24,7 @@ from .models import (
 from .serializers import (
     PeopleHistorySerializer, CompaniesHistorySerializer, EmploymentHistorySerializer,
     FamilyRelationshipsSerializer, CorrespondenceTypesSerializer, ContactsSerializer,
-    CorrespondenceSerializer, CorrespondenceContactsSerializer, AttachmentsSerializer,
+    CorrespondenceSerializer, AttachmentsSerializer,
     PermitsSerializer, ApprovalDecisionsSerializer,
     AccidentsSerializer, RelocationSerializer, RelocationPeriodSerializer,
     VehicleSerializer, CarPermitSerializer, CardPermitsSerializer,
@@ -92,11 +92,7 @@ class CorrespondenceViewSet(viewsets.ModelViewSet):
     ordering = ['-correspondence_date']
 
 
-class CorrespondenceContactsViewSet(viewsets.ModelViewSet):
-    queryset = CorrespondenceContacts.objects.all()
-    serializer_class = CorrespondenceContactsSerializer
-    filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['role']
+
 
 
 

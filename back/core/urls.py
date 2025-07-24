@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     PeopleHistoryViewSet, CompaniesHistoryViewSet, EmploymentHistoryViewSet,
     FamilyRelationshipsViewSet, CorrespondenceTypesViewSet, ContactsViewSet,
-    CorrespondenceContactsViewSet,
+
     PermitsViewSet, ApprovalDecisionsViewSet, AccidentsViewSet,
     RelocationViewSet, RelocationPeriodViewSet, VehicleViewSet,
     CarPermitViewSet, CardPermitsViewSet, CardPhotosViewSet, SettingsViewSet,
@@ -30,7 +30,7 @@ router.register(r'family-relationships', FamilyRelationshipsViewSet)
 router.register(r'correspondence-types', CorrespondenceTypesViewSet)
 router.register(r'contacts', ContactsViewSet)
 router.register(r'correspondence', CorrespondenceViewSet)
-router.register(r'correspondence-contacts', CorrespondenceContactsViewSet)
+
 router.register(r'attachments', AttachmentsViewSet)
 
 router.register(r'correspondence-type-procedures', CorrespondenceTypeProcedureViewSet)

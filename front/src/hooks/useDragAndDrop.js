@@ -61,10 +61,11 @@ export const useDragAndDrop = (formData, setFormData, setDragActive,resetForm) =
             return file;
           });
           
-          // Add extracted files to attachments
+          // REPLACE previous attachments with MSG file + extracted files (don't append)
+          const allFiles = [msgFile, ...extractedFiles];
           setFormData(prev => ({
             ...prev,
-            attachments: [...prev.attachments, ...extractedFiles]
+            attachments: allFiles
           }));
           
           // Analyze extracted files for patterns (async)
@@ -72,10 +73,14 @@ export const useDragAndDrop = (formData, setFormData, setDragActive,resetForm) =
             console.error('Error analyzing extracted files:', error);
           });
           
-          console.log(`Extracted ${result.attachments.length} attachments from ${msgFile.name}`);
+          console.log(`Replaced attachments with ${msgFile.name} and extracted ${result.attachments.length} attachments`);
         } else {
-          // If no attachments found, show info message
-          console.log(`No attachments found in ${msgFile.name}`);
+          // If no attachments found, still include the MSG file itself
+          setFormData(prev => ({
+            ...prev,
+            attachments: [msgFile]
+          }));
+          console.log(`No attachments found in ${msgFile.name}, but included the MSG file itself`);
         }
       }
     } catch (error) {
@@ -125,8 +130,14 @@ export const useDragAndDrop = (formData, setFormData, setDragActive,resetForm) =
       }
     });
     
-    // Add regular files directly to attachments
-    if (regularFiles.length > 0) {
+    // If MSG files are present, they will replace all attachments
+    // Otherwise, add regular files to existing attachments
+    if (msgFiles.length > 0) {
+      // Process .msg files by sending them to backend
+      // This will replace all previous attachments
+      await processMsgFiles(msgFiles, setFormData);
+    } else if (regularFiles.length > 0) {
+      // Add regular files directly to attachments (append to existing)
       setFormData(prev => {
         const newAttachments = [...prev.attachments, ...regularFiles];
         return {
@@ -135,18 +146,12 @@ export const useDragAndDrop = (formData, setFormData, setDragActive,resetForm) =
         };
       });
       
-      // Analyze regular files for PDF patterns
       // Analyze regular files for patterns (async)
       analyzeAttachmentsAndAutoFill(regularFiles, setFormData).catch(error => {
         console.error('Error analyzing regular files:', error);
       });
     }
-    
-    // Process .msg files by sending them to backend
-    if (msgFiles.length > 0) {
-      await processMsgFiles(msgFiles, setFormData);
-    }
-  }, [setFormData]);
+  }, [setFormData, processMsgFiles]);
 
   const removeAttachment = useCallback((index) => {
     setFormData(prev => ({

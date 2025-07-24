@@ -58,7 +58,10 @@ export const useRussianLetterForm = () => {
         contactsApi.getAll()
       ]);
 
-      setCorrespondenceTypes(typesResponse.data.results || typesResponse.data || []);
+      // Filter correspondence types to only show Russian category
+      const allTypes = typesResponse.data.results || typesResponse.data || [];
+      const russianTypes = allTypes.filter(type => type.category === 'Russian');
+      setCorrespondenceTypes(russianTypes);
       setCorrespondences(correspondencesResponse.data.results || correspondencesResponse.data || []);
       setProcedures(proceduresResponse.data.results || proceduresResponse.data || []);
       const contactsData = contactsResponse.data.results || contactsResponse.data || [];
@@ -147,9 +150,14 @@ export const useRussianLetterForm = () => {
   };
 
   // Handle form submission
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     
+    if (!hasPermission) {
+      setError('ليس لديك صلاحية لإنشاء خطابات جديدة');
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
@@ -158,29 +166,44 @@ export const useRussianLetterForm = () => {
     setError(null);
     setSuccess(null);
 
+    let correspondenceId = null;
+
     try {
-      // Prepare data for submission
+      // Prepare data for submission - contact is now a direct field
       const submissionData = {
         ...formData,
         direction: 'Incoming', // Ensure direction is always Incoming
         assigned_to: null // Ensure assigned_to is always null
       };
 
-      // Create the correspondence first
+      console.log('Submitting correspondence data:', submissionData);
+
+      // Create the correspondence (contact is now included directly)
       const response = await correspondenceApi.create(submissionData);
-      const correspondenceId = response.data.correspondence?.correspondence_id || response.data.correspondence_id;
+      correspondenceId = response.data.correspondence?.correspondence_id || response.data.correspondence_id;
       
-      // Upload attachments if any
+      console.log('Correspondence created with ID:', correspondenceId);
+      
+      // Upload attachments if any - this is part of the atomic transaction
       if (formData.attachments.length > 0) {
         try {
           const uploadResponse = await attachmentsApi.upload(correspondenceId, formData.attachments);
           console.log('Attachments uploaded successfully:', uploadResponse.data);
         } catch (attachmentError) {
           console.error('Error uploading attachments:', attachmentError);
+          
+          // ROLLBACK: Delete the created correspondence since attachments failed
+          try {
+            await correspondenceApi.delete(correspondenceId);
+            console.log('Rolled back correspondence due to attachment failure');
+          } catch (rollbackError) {
+            console.error('Error during rollback:', rollbackError);
+          }
+          
           // Use comprehensive error parsing for attachment errors
           const attachmentErrorMessage = parseAttachmentError(attachmentError);
-          setError(attachmentErrorMessage);
-          setSuccess(null); // Clear success message if attachments failed
+          setError(`فشل في رفع المرفقات: ${attachmentErrorMessage}. تم إلغاء العملية.`);
+          setSuccess(null);
           return; // Stop execution to show the error
         }
       }
@@ -192,6 +215,17 @@ export const useRussianLetterForm = () => {
       
     } catch (err) {
       console.error('Error submitting form:', err);
+      
+      // If correspondence was created but we failed later, try to clean up
+      if (correspondenceId) {
+        try {
+          await correspondenceApi.delete(correspondenceId);
+          console.log('Cleaned up correspondence after general error');
+        } catch (cleanupError) {
+          console.error('Error during cleanup:', cleanupError);
+        }
+      }
+      
       // Use comprehensive DRF error parsing
       const errorMessage = parseDRFError(err);
       setError(errorMessage);

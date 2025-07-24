@@ -43,7 +43,7 @@ const CustomToolbar = ({ onAdd }) => {
         onClick={onAdd}
         sx={{ mr: 1 }}
       >
-        إضافة مراسلة جديدة
+        إضافة خطاب جديدة
       </Button>
       <GridToolbarFilterButton />
       <GridToolbarColumnsButton />
@@ -81,7 +81,7 @@ const CorrespondenceManagement = () => {
   const columns = [
     {
       field: 'correspondence_id',
-      headerName: 'رقم المراسلة',
+      headerName: 'رقم الخطاب',
       width: 120,
       editable: false,
     },
@@ -100,7 +100,7 @@ const CorrespondenceManagement = () => {
     },
     {
       field: 'type_name',
-      headerName: 'نوع المراسلة',
+      headerName: 'نوع الخطاب',
       width: 150,
       editable: false,
       renderCell: (params) => {
@@ -129,7 +129,7 @@ const CorrespondenceManagement = () => {
     },
     {
       field: 'correspondence_date',
-      headerName: 'تاريخ المراسلة',
+      headerName: 'تاريخ الخطاب',
       width: 150,
       type: 'date',
       editable: true,

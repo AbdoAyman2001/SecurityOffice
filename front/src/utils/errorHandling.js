@@ -151,17 +151,20 @@ const parseFieldErrors = (data) => {
 const parseNonFieldErrors = (errors) => {
   console.log('parseNonFieldErrors called with:', errors);
   
-  return errors.map(error => {
-    console.log('Processing individual error:', error);
+  if (!Array.isArray(errors)) {
+    return 'حدث خطأ في التحقق من البيانات.';
+  }
+
+  const translatedErrors = errors.map(error => {
+    console.log('Processing error:', error);
     
-    // Handle specific unique constraint error format
-    if (error.includes('The fields reference_number, correspondence_date must make a unique set')) {
-      console.log('Matched unique constraint error, returning Arabic translation');
-      return 'يوجد خطاب آخر بنفس الرقم المرجعي والتاريخ. يرجى استخدام رقم مرجعي مختلف أو تاريخ مختلف.';
+    // Handle specific unique constraint errors
+    if (error.includes('reference_number') && error.includes('correspondence_date') && error.includes('unique')) {
+      return 'يوجد خطاب آخر بنفس الرقم المرجعي وتاريخ الخطاب. يرجى تغيير أحد هذين الحقلين.';
     }
     
-    // Handle other unique constraint violations
-    if (error.includes('unique') || error.includes('already exists')) {
+    // Handle general unique constraint errors
+    if (error.includes('unique')) {
       return parseUniqueConstraintError(error);
     }
     
@@ -176,15 +179,121 @@ const parseNonFieldErrors = (errors) => {
  * @returns {string} - User-friendly error message
  */
 const parseUniqueConstraintError = (errorDetail) => {
-  if (errorDetail.includes('reference_number') && errorDetail.includes('correspondence_date')) {
-    return 'يوجد خطاب آخر بنفس الرقم المرجعي والتاريخ. يرجى استخدام رقم مرجعي مختلف أو تاريخ مختلف.';
-  }
-  
+  // Handle specific unique constraint patterns
   if (errorDetail.includes('reference_number')) {
     return 'الرقم المرجعي مستخدم من قبل. يرجى استخدام رقم مرجعي مختلف.';
   }
   
-  return 'البيانات المدخلة موجودة مسبقاً. يرجى التحقق من البيانات والمحاولة مرة أخرى.';
+  if (errorDetail.includes('email')) {
+    return 'عنوان البريد الإلكتروني مستخدم من قبل.';
+  }
+  
+  // Generic unique constraint error
+  return 'القيمة المدخلة مستخدمة من قبل. يرجى استخدام قيمة مختلفة.';
+};
+
+/**
+ * Parse RESTRICT constraint errors
+ * @param {string} errorDetail - Error detail message
+ * @returns {string} - User-friendly error message
+ */
+const parseRestrictConstraintError = (errorDetail) => {
+  // Handle specific RESTRICT patterns
+  if (errorDetail.includes('User') || errorDetail.includes('user')) {
+    return 'لا يمكن حذف هذا المستخدم لأنه مرتبط ببيانات أخرى في النظام.';
+  }
+  
+  if (errorDetail.includes('Contact') || errorDetail.includes('contact')) {
+    return 'لا يمكن حذف هذا الاتصال لأنه مرتبط بخطابات أو بيانات أخرى.';
+  }
+  
+  if (errorDetail.includes('CorrespondenceType') || errorDetail.includes('correspondence_type')) {
+    return 'لا يمكن حذف نوع الخطاب لأنه مستخدم في خطابات موجودة.';
+  }
+  
+  if (errorDetail.includes('Procedure') || errorDetail.includes('procedure')) {
+    return 'لا يمكن حذف هذا الإجراء لأنه مرتبط بخطابات أو بيانات أخرى.';
+  }
+  
+  // Generic RESTRICT error
+  return 'لا يمكن حذف هذا العنصر لأنه مرتبط ببيانات أخرى في النظام. يرجى حذف البيانات المرتبطة أولاً.';
+};
+
+/**
+ * Parse foreign key constraint errors
+ * @param {string} errorDetail - Error detail message
+ * @returns {string} - User-friendly error message
+ */
+const parseForeignKeyConstraintError = (errorDetail) => {
+  // Handle specific foreign key patterns
+  if (errorDetail.includes('contact') || errorDetail.includes('Contact')) {
+    return 'الاتصال المحدد غير موجود. يرجى اختيار اتصال صحيح.';
+  }
+  
+  if (errorDetail.includes('user') || errorDetail.includes('User')) {
+    return 'المستخدم المحدد غير موجود.';
+  }
+  
+  if (errorDetail.includes('type') || errorDetail.includes('Type')) {
+    return 'نوع الخطاب المحدد غير موجود. يرجى اختيار نوع صحيح.';
+  }
+  
+  if (errorDetail.includes('procedure') || errorDetail.includes('Procedure')) {
+    return 'الإجراء المحدد غير موجود. يرجى اختيار إجراء صحيح.';
+  }
+  
+  // Generic foreign key error
+  return 'العنصر المرجعي غير موجود. يرجى التحقق من البيانات المدخلة.';
+};
+
+/**
+ * Parse check constraint errors
+ * @param {string} errorDetail - Error detail message
+ * @returns {string} - User-friendly error message
+ */
+const parseCheckConstraintError = (errorDetail) => {
+  // Handle specific check constraint patterns
+  if (errorDetail.includes('priority')) {
+    return 'قيمة الأولوية غير صحيحة. يرجى اختيار أولوية صحيحة.';
+  }
+  
+  if (errorDetail.includes('direction')) {
+    return 'اتجاه الخطاب غير صحيح. يرجى اختيار اتجاه صحيح.';
+  }
+  
+  if (errorDetail.includes('status')) {
+    return 'حالة الخطاب غير صحيحة. يرجى اختيار حالة صحيحة.';
+  }
+  
+  // Generic check constraint error
+  return 'القيمة المدخلة لا تتوافق مع القيود المحددة. يرجى التحقق من البيانات.';
+};
+
+/**
+ * Parse NOT NULL constraint errors
+ * @param {string} errorDetail - Error detail message
+ * @returns {string} - User-friendly error message
+ */
+const parseNotNullConstraintError = (errorDetail) => {
+  // Handle specific NOT NULL patterns
+  if (errorDetail.includes('reference_number')) {
+    return 'الرقم المرجعي مطلوب ولا يمكن أن يكون فارغاً.';
+  }
+  
+  if (errorDetail.includes('correspondence_date')) {
+    return 'تاريخ الخطاب مطلوب ولا يمكن أن يكون فارغاً.';
+  }
+  
+  if (errorDetail.includes('subject')) {
+    return 'موضوع الخطاب مطلوب ولا يمكن أن يكون فارغاً.';
+  }
+  
+  if (errorDetail.includes('contact')) {
+    return 'الاتصال مطلوب ولا يمكن أن يكون فارغاً.';
+  }
+  
+  // Generic NOT NULL error
+  return 'هذا الحقل مطلوب ولا يمكن أن يكون فارغاً.';
 };
 
 /**
@@ -237,6 +346,7 @@ const parseGenericError = (data) => {
  */
 const translateValidationMessage = (message) => {
   const translations = {
+    // Basic validation messages
     'This field is required.': 'هذا الحقل مطلوب.',
     'This field may not be blank.': 'هذا الحقل لا يمكن أن يكون فارغاً.',
     'This field may not be null.': 'هذا الحقل مطلوب.',
@@ -245,20 +355,83 @@ const translateValidationMessage = (message) => {
     'Enter a valid date.': 'يرجى إدخال تاريخ صحيح.',
     'Enter a valid time.': 'يرجى إدخال وقت صحيح.',
     'Enter a valid number.': 'يرجى إدخال رقم صحيح.',
+    'Enter a valid integer.': 'يرجى إدخال رقم صحيح.',
+    'Enter a valid decimal number.': 'يرجى إدخال رقم عشري صحيح.',
+    
+    // Length and range validation
     'Ensure this value is greater than or equal to': 'يجب أن تكون القيمة أكبر من أو تساوي',
     'Ensure this value is less than or equal to': 'يجب أن تكون القيمة أقل من أو تساوي',
     'Ensure this field has no more than': 'يجب ألا يتجاوز هذا الحقل',
     'Ensure this field has at least': 'يجب أن يحتوي هذا الحقل على الأقل على',
+    'Ensure this value has at most': 'يجب ألا تتجاوز القيمة',
+    'Ensure this value has at least': 'يجب أن تحتوي القيمة على الأقل على',
+    'characters': 'حرف',
+    'character': 'حرف',
+    
+    // Choice validation
     'Invalid choice.': 'اختيار غير صحيح.',
     'Not a valid choice.': 'اختيار غير صحيح.',
+    'Select a valid choice.': 'يرجى اختيار خيار صحيح.',
+    
+    // Unique constraint messages
+    'This field must be unique.': 'هذا الحقل يجب أن يكون فريداً.',
+    'already exists': 'موجود مسبقاً',
+    'must be unique': 'يجب أن يكون فريداً',
+    'The fields reference_number, correspondence_date must make a unique set.': 'يوجد خطاب آخر بنفس الرقم المرجعي وتاريخ الخطاب. يرجى تغيير أحد هذين الحقلين.',
+    
+    // Authentication and authorization
     'Authentication credentials were not provided.': 'لم يتم توفير بيانات المصادقة.',
     'Invalid token.': 'رمز المصادقة غير صحيح.',
     'Token has expired.': 'انتهت صلاحية رمز المصادقة.',
     'Permission denied.': 'ليس لديك الصلاحية للقيام بهذا الإجراء.',
+    'You do not have permission to perform this action.': 'ليس لديك الصلاحية للقيام بهذا الإجراء.',
+    
+    // HTTP status messages
     'Not found.': 'العنصر المطلوب غير موجود.',
     'Method not allowed.': 'العملية غير مسموحة.',
     'Unsupported media type.': 'نوع الملف غير مدعوم.',
     'Request was throttled.': 'تم تجاوز الحد المسموح من الطلبات.',
+    'Bad request.': 'طلب غير صحيح.',
+    'Internal server error.': 'خطأ في الخادم.',
+    
+    // Database constraint messages
+    'UNIQUE constraint failed': 'فشل في قيد الفرادة',
+    'NOT NULL constraint failed': 'فشل في قيد عدم الفراغ',
+    'FOREIGN KEY constraint failed': 'فشل في قيد المفتاح الأجنبي',
+    'CHECK constraint failed': 'فشل في قيد التحقق',
+    'cannot be deleted because it is referenced': 'لا يمكن حذفه لأنه مرجع إليه',
+    'violates foreign key constraint': 'ينتهك قيد المفتاح الأجنبي',
+    'violates unique constraint': 'ينتهك قيد الفرادة',
+    'violates not-null constraint': 'ينتهك قيد عدم الفراغ',
+    'violates check constraint': 'ينتهك قيد التحقق',
+    
+    // File upload messages
+    'The submitted file is empty.': 'الملف المرسل فارغ.',
+    'No file was submitted.': 'لم يتم إرسال أي ملف.',
+    'The submitted data was not a file.': 'البيانات المرسلة ليست ملفاً.',
+    'File too large.': 'الملف كبير جداً.',
+    'Invalid file type.': 'نوع الملف غير صحيح.',
+    
+    // Date and time validation
+    'Date has wrong format.': 'تنسيق التاريخ غير صحيح.',
+    'Time has wrong format.': 'تنسيق الوقت غير صحيح.',
+    'Datetime has wrong format.': 'تنسيق التاريخ والوقت غير صحيح.',
+    'Expected a date but got a datetime.': 'متوقع تاريخ لكن تم الحصول على تاريخ ووقت.',
+    'Expected a datetime but got a date.': 'متوقع تاريخ ووقت لكن تم الحصول على تاريخ فقط.',
+    
+    // JSON and data format messages
+    'JSON parse error': 'خطأ في تحليل JSON',
+    'Invalid JSON.': 'JSON غير صحيح.',
+    'Malformed JSON.': 'JSON مشوه.',
+    'Expected a dictionary but got': 'متوقع قاموس لكن تم الحصول على',
+    'Expected a list but got': 'متوقعة قائمة لكن تم الحصول على',
+    
+    // Model validation messages
+    'Instance with this': 'مثيل بهذا',
+    'does not exist': 'غير موجود',
+    'is not a valid': 'ليس صحيحاً',
+    'Invalid pk': 'مفتاح أساسي غير صحيح',
+    'Incorrect type': 'نوع غير صحيح',
   };
 
   // Check for exact matches first

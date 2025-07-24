@@ -1,3 +1,4 @@
+from unicodedata import category
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.conf import settings
@@ -15,6 +16,11 @@ class User(AbstractUser):
         ('normal', 'Normal User'),
     ]
     
+    is_active = models.BooleanField(
+        default=True,
+        help_text='for soft deletion'
+    )
+
     role = models.CharField(
         max_length=20, 
         choices=USER_ROLES, 
@@ -217,10 +223,17 @@ class FamilyRelationships(models.Model):
 
 
 # ====================================== CORRESPONDENCE ======================================
+
 class CorrespondenceTypes(models.Model):
     """Types of correspondence"""
+    CATEGORY_CHOICES = [
+        ('General', 'General'),
+        ('Russian', 'Russian')
+    ]
+
     correspondence_type_id = models.AutoField(primary_key=True)
     type_name = models.CharField(max_length=255)
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, help_text='General, Russian')
     
     class Meta:
         db_table = 'correspondence_types'
@@ -234,7 +247,7 @@ class CorrespondenceTypes(models.Model):
 class CorrespondenceTypeProcedure(models.Model):
     """Procedures/statuses for each correspondence type"""
     id = models.AutoField(primary_key=True)
-    correspondence_type = models.ForeignKey(CorrespondenceTypes, on_delete=models.CASCADE, related_name='procedures')
+    correspondence_type = models.ForeignKey(CorrespondenceTypes, on_delete=models.CASCADE, related_name='procedures', db_column='correspondence_type_id')
     procedure_name = models.CharField(max_length=255, help_text='Name of the procedure/status step')
     procedure_order = models.IntegerField(default=0, help_text='Order of this procedure in the workflow')
     is_initial = models.BooleanField(default=False, help_text='True if this is the initial status')
@@ -249,6 +262,9 @@ class CorrespondenceTypeProcedure(models.Model):
         verbose_name_plural = 'Correspondence Type Procedures'
         unique_together = ['correspondence_type', 'procedure_name']
         ordering = ['correspondence_type', 'procedure_order']
+        indexes = [
+            models.Index(fields=['correspondence_type', 'procedure_name'], name='idx_corr_type_proc_unique'),
+        ]
     
     def __str__(self):
         return f"{self.correspondence_type.type_name} - {self.procedure_name}"
@@ -290,17 +306,18 @@ class Correspondence(models.Model):
     ]
     
     correspondence_id = models.AutoField(primary_key=True)
-    parent_correspondence = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
-    reference_number = models.CharField(max_length=255, blank=True, null=True)
-    correspondence_date = models.DateField(blank=True, null=True)
-    type = models.ForeignKey(CorrespondenceTypes, on_delete=models.SET_NULL, null=True, blank=True)
-    subject = models.CharField(max_length=255, blank=True, null=True)
-    direction = models.CharField(max_length=50, choices=DIRECTION_CHOICES, help_text='the flow of the correspondence')
-    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal')
+    parent_correspondence = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, db_column='parent_correspondence_id', help_text='Self-referencing foreign key for related correspondence')
+    reference_number = models.CharField(max_length=255)
+    contact = models.ForeignKey(Contacts, on_delete=models.RESTRICT, db_column='contact', null=True, blank=True)
+    correspondence_date = models.DateField()
+    type = models.ForeignKey(CorrespondenceTypes, on_delete=models.RESTRICT, null=True, blank=True, db_column='type_id', help_text='Foreign key to CorrespondenceTypes')
+    subject = models.CharField(max_length=255)
+    direction = models.CharField(max_length=50, choices=DIRECTION_CHOICES, help_text='Incoming, Outgoing, Internal; the flow of the correspondence')
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='normal', help_text='high, normal, low')
     summary = models.CharField(max_length=1000, blank=True, null=True)
-    current_status = models.ForeignKey('CorrespondenceTypeProcedure', on_delete=models.SET_NULL, null=True, blank=True, help_text='Current status/procedure of this correspondence')
-    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="المسؤول")
-    created_at = models.DateTimeField(default=timezone.now)
+    current_status = models.ForeignKey('CorrespondenceTypeProcedure', on_delete=models.RESTRICT, null=True, blank=True, db_column='current_status_id', help_text='Foreign key to CorrespondenceTypeProcedure; Current status/procedure of this correspondence')
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.RESTRICT, null=True, blank=True, db_column='assigned_to_id', verbose_name="المسؤول", help_text='Foreign key to Django Auth User model')
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
@@ -308,6 +325,9 @@ class Correspondence(models.Model):
         verbose_name = 'Correspondence'
         verbose_name_plural = 'Correspondence'
         unique_together = ['reference_number', 'correspondence_date']
+        indexes = [
+            models.Index(fields=['reference_number', 'correspondence_date'], name='idx_ref_num_date_unique'),
+        ]
     
     def __str__(self):
         return f"Correspondence {self.correspondence_id} - {self.subject or 'No Subject'}"
@@ -320,12 +340,12 @@ class Correspondence(models.Model):
 class CorrespondenceStatusLog(models.Model):
     """Log of status changes for correspondence tracking"""
     id = models.AutoField(primary_key=True)
-    correspondence = models.ForeignKey(Correspondence, on_delete=models.CASCADE, related_name='status_logs')
-    from_status = models.ForeignKey(CorrespondenceTypeProcedure, on_delete=models.SET_NULL, null=True, blank=True, related_name='from_status_logs', help_text='Previous status')
-    to_status = models.ForeignKey(CorrespondenceTypeProcedure, on_delete=models.SET_NULL, null=True, related_name='to_status_logs', help_text='New status')
-    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name="تم التغيير بواسطة", null=True, blank=True)
+    correspondence = models.ForeignKey(Correspondence, on_delete=models.CASCADE, related_name='status_logs', db_column='correspondence_id')
+    form_status_name = models.CharField(max_length=200, blank=True, null=True)
+    to_status_name = models.CharField(max_length=200, blank=True, null=True)
+    changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.RESTRICT, verbose_name="تم التغيير بواسطة", null=True, blank=True, db_column='changed_by_id', help_text='Foreign key to Django Auth User model')
     change_reason = models.TextField(blank=True, null=True, help_text='Optional reason for the status change')
-    created_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
         db_table = 'correspondence_status_log'
@@ -334,31 +354,13 @@ class CorrespondenceStatusLog(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        from_status_name = self.from_status.procedure_name if self.from_status else 'Initial'
-        return f"Correspondence {self.correspondence.correspondence_id}: {from_status_name} → {self.to_status.procedure_name} by {self.changed_by.username}"
+        from_status_name = self.form_status_name or 'Initial'
+        to_status_name = self.to_status_name or 'Unknown'
+        changed_by_name = self.changed_by.username if self.changed_by else 'System'
+        return f"Correspondence {self.correspondence.correspondence_id}: {from_status_name} → {to_status_name} by {changed_by_name}"
 
 
-class CorrespondenceContacts(models.Model):
-    """Many-to-many relationship between correspondence and contacts"""
-    ROLE_CHOICES = [
-        ('Sender', 'Sender'),
-        ('Recipient', 'Recipient'),
-        ('CC', 'CC'),
-        ('BCC', 'BCC'),
-    ]
-    
-    contact = models.ForeignKey(Contacts, on_delete=models.CASCADE)
-    correspondence = models.ForeignKey(Correspondence, on_delete=models.CASCADE)
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    
-    class Meta:
-        db_table = 'correspondence_contacts'
-        unique_together = ['correspondence', 'contact', 'role']
-        verbose_name = 'Correspondence Contact'
-        verbose_name_plural = 'Correspondence Contacts'
-    
-    def __str__(self):
-        return f"{self.contact.name} - {self.role}"
+
 
 
 def attachment_upload_path(instance, filename):

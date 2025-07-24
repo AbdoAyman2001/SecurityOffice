@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import (
     User, PeopleHistory, CompaniesHistory, EmploymentHistory, FamilyRelationships,
-    CorrespondenceTypes, Contacts, Correspondence, CorrespondenceContacts, Attachments,
+    CorrespondenceTypes, Contacts, Correspondence, Attachments,
     CorrespondenceStatusLog, Permits, ApprovalDecisions, Accidents, Relocation,
     RelocationPeriod, Vehicle, CarPermit, CardPermits, CardPhotos, Settings
 )
@@ -152,7 +152,7 @@ class FamilyRelationshipsAdmin(admin.ModelAdmin):
 # ====================================== CORRESPONDENCE ADMIN ======================================
 @admin.register(CorrespondenceTypes)
 class CorrespondenceTypesAdmin(admin.ModelAdmin):
-    list_display = ['correspondence_type_id', 'type_name']
+    list_display = ['correspondence_type_id', 'type_name', 'category']
     search_fields = ['type_name']
 
 
@@ -163,9 +163,7 @@ class ContactsAdmin(admin.ModelAdmin):
     search_fields = ['name']
 
 
-class CorrespondenceContactsInline(admin.TabularInline):
-    model = CorrespondenceContacts
-    extra = 1
+
 
 
 class AttachmentsInline(admin.TabularInline):
@@ -175,24 +173,24 @@ class AttachmentsInline(admin.TabularInline):
 
 @admin.register(Correspondence)
 class CorrespondenceAdmin(admin.ModelAdmin):
-    list_display = ['correspondence_id', 'reference_number', 'subject', 'direction', 'priority', 'correspondence_date']
-    list_filter = ['direction', 'priority', 'correspondence_date', 'type']
-    search_fields = ['reference_number', 'subject', 'summary']
-    inlines = [CorrespondenceContactsInline, AttachmentsInline]
+    list_display = ['correspondence_id', 'reference_number', 'subject', 'direction', 'priority', 'correspondence_date', 'contact']
+    list_filter = ['direction', 'priority', 'correspondence_date', 'type', 'contact']
+    search_fields = ['reference_number', 'subject']
+    inlines = [AttachmentsInline]
     fieldsets = (
         ('Basic Information', {
-            'fields': ('reference_number', 'correspondence_date', 'type', 'subject')
+            'fields': ('reference_number', 'correspondence_date', 'type', 'subject', 'contact')
         }),
         ('Details', {
             'fields': ('direction', 'priority', 'summary', 'parent_correspondence')
+        }),
+        ('Status & Assignment', {
+            'fields': ('current_status', 'assigned_to')
         })
     )
 
 
-@admin.register(CorrespondenceContacts)
-class CorrespondenceContactsAdmin(admin.ModelAdmin):
-    list_display = ['correspondence', 'contact', 'role']
-    list_filter = ['role']
+
 
 
 @admin.register(Attachments)
@@ -204,14 +202,14 @@ class AttachmentsAdmin(admin.ModelAdmin):
 
 @admin.register(CorrespondenceStatusLog)
 class CorrespondenceStatusLogAdmin(admin.ModelAdmin):
-    list_display = ['id', 'correspondence', 'from_status', 'to_status', 'changed_by', 'created_at']
-    list_filter = ['to_status', 'from_status', 'created_at', 'changed_by']
+    list_display = ['id', 'correspondence', 'form_status_name', 'to_status_name', 'changed_by', 'created_at']
+    list_filter = ['to_status_name', 'form_status_name', 'created_at', 'changed_by']
     search_fields = ['correspondence__reference_number', 'correspondence__subject', 'change_reason']
     readonly_fields = ['created_at']
     ordering = ['-created_at']
     
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('correspondence', 'from_status', 'to_status', 'changed_by')
+        return super().get_queryset(request).select_related('correspondence', 'changed_by')
 
 
 # ====================================== APPROVAL ADMIN ======================================
