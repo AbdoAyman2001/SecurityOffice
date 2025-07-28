@@ -117,6 +117,8 @@ const RussianLetters = () => {
         onRefresh={resetAndReload}
         onToggleAdvancedFilters={() => setShowAdvancedFiltersModal(true)}
         loading={loading}
+        advancedFilters={advancedFilters}
+        columnFilters={columnFilters}
       />
 
       {/* Advanced Filter Modal */}

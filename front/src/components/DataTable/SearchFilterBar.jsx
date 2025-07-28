@@ -29,7 +29,9 @@ const SearchFilterBar = ({
   onClearAllFilters,
   onRefresh,
   onToggleAdvancedFilters,
-  loading
+  loading,
+  advancedFilters = [],
+  columnFilters = {}
 }) => {
   const navigate = useNavigate();
   const { canEditCorrespondence } = useAuth();
@@ -40,44 +42,16 @@ const SearchFilterBar = ({
 
   return (
     <Box sx={{ mb: 1 }}>
-      {/* Title and Statistics */}
+      {/* Title and Action Buttons */}
       <Box sx={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
         mb: 2
       }}>
-        <Box>
-          <Typography variant="h5" component="h5" gutterBottom>
-            الخطابات الروسية
-          </Typography>
-          
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Typography variant="body2" color="textSecondary">
-              إجمالي الخطابات:
-            </Typography>
-            <Chip 
-              label={totalCount.toLocaleString()} 
-              size="small" 
-              color="primary" 
-              variant="outlined" 
-            />
-            
-            {isFiltered && (
-              <>
-                <Typography variant="body2" color="textSecondary">
-                  المعروضة:
-                </Typography>
-                <Chip 
-                  label={filteredCount.toLocaleString()} 
-                  size="small" 
-                  color="secondary" 
-                  variant="filled" 
-                />
-              </>
-            )}
-          </Stack>
-        </Box>
+        <Typography variant="h5" component="h5">
+          الخطابات الروسية
+        </Typography>
 
         {/* Action Buttons */}
         <Stack direction="row" spacing={1} alignItems="center">
@@ -168,22 +142,51 @@ const SearchFilterBar = ({
             border: '1px solid',
             borderColor: 'divider'
           }}>
-            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
-              <Typography variant="body2" color="textSecondary">
-                الفلاتر النشطة:
-              </Typography>
+            <Stack spacing={1}>
+              {/* Filter Count and Results */}
+              <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                <Typography variant="body2" color="textSecondary">
+                  الفلاتر النشطة:
+                </Typography>
+                
+                {/* Search Filter */}
+                {searchTerm && (
+                  <Chip
+                    label={`البحث: "${searchTerm}"`}
+                    size="small"
+                    onDelete={() => onSearch('')}
+                    color="primary"
+                  />
+                )}
+                
+                {/* Column Filters */}
+                {Object.entries(columnFilters).map(([column, values]) => {
+                  if (!values || values.length === 0) return null;
+                  return (
+                    <Chip
+                      key={column}
+                      label={`${column}: ${values.length} قيمة`}
+                      size="small"
+                      color="secondary"
+                      variant="outlined"
+                    />
+                  );
+                })}
+                
+                {/* Advanced Filters */}
+                {advancedFilters.length > 0 && (
+                  <Chip
+                    label={`فلاتر متقدمة: ${advancedFilters.length}`}
+                    size="small"
+                    color="warning"
+                    variant="outlined"
+                  />
+                )}
+              </Stack>
               
-              {searchTerm && (
-                <Chip
-                  label={`البحث: "${searchTerm}"`}
-                  size="small"
-                  onDelete={() => onSearch('')}
-                  color="primary"
-                />
-              )}
-              
+              {/* Results Summary */}
               <Typography variant="body2" color="textSecondary">
-                عرض {filteredCount} من أصل {totalCount} خطاب
+                عرض {filteredCount.toLocaleString()} من أصل {totalCount.toLocaleString()} خطاب
               </Typography>
             </Stack>
           </Box>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -15,96 +15,96 @@ import {
   Typography,
   Paper,
   Divider,
-  ButtonGroup
-} from '@mui/material';
+  ButtonGroup,
+} from "@mui/material";
 import {
   Add as AddIcon,
   Delete as DeleteIcon,
   Close as CloseIcon,
   Search as SearchIcon,
-  Clear as ClearIcon
-} from '@mui/icons-material';
-import { correspondenceTypesApi, peopleApi } from '../../services/apiService';
+  Clear as ClearIcon,
+} from "@mui/icons-material";
+import { correspondenceTypesApi, peopleApi } from "../../services/apiService";
 
-const AdvancedFilterModal = ({ 
+const AdvancedFilterModal = ({
   open,
   onClose,
-  filters, 
-  onFiltersChange, 
-  onApply, 
-  onClear
+  filters,
+  onFiltersChange,
+  onApply,
+  onClear,
 }) => {
   const [localFilters, setLocalFilters] = useState(filters);
   const [correspondenceTypes, setCorrespondenceTypes] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [globalLogic, setGlobalLogic] = useState('AND'); // Global AND/OR logic
+  const [globalLogic, setGlobalLogic] = useState("AND"); // Global AND/OR logic
 
   // Simplified operators
   const operators = {
     text: [
-      { value: 'contains', label: 'يحتوي على' },
-      { value: 'equals', label: 'يساوي' },
-      { value: 'not_contains', label: 'لا يحتوي على' }
+      { value: "contains", label: "يحتوي على" },
+      { value: "equals", label: "يساوي" },
+      { value: "not_contains", label: "لا يحتوي على" },
     ],
     select: [
-      { value: 'equals', label: 'يساوي' },
-      { value: 'not_equals', label: 'لا يساوي' }
+      { value: "equals", label: "يساوي" },
+      { value: "not_equals", label: "لا يساوي" },
     ],
     date: [
-      { value: 'equals', label: 'في تاريخ' },
-      { value: 'before', label: 'قبل' },
-      { value: 'after', label: 'بعد' }
-    ]
+      { value: "equals", label: "في تاريخ" },
+      { value: "before", label: "قبل" },
+      { value: "after", label: "بعد" },
+    ],
   };
 
   // Simplified field definitions
   const fields = [
-    { 
-      id: 'reference_number', 
-      label: 'الرقم المرجعي', 
-      type: 'text',
-      operators: operators.text
+    {
+      id: "reference_number",
+      label: "الرقم المرجعي",
+      type: "text",
+      operators: operators.text,
     },
-    { 
-      id: 'correspondence_date', 
-      label: 'التاريخ', 
-      type: 'date',
-      operators: operators.date
+    {
+      id: "correspondence_date",
+      label: "التاريخ",
+      type: "date",
+      operators: operators.date,
     },
-    { 
-      id: 'priority', 
-      label: 'الأولوية', 
-      type: 'select',
+    {
+      id: "priority",
+      label: "الأولوية",
+      type: "select",
       operators: operators.select,
       options: [
-        { value: 'high', label: 'عالية' },
-        { value: 'normal', label: 'عادية' },
-        { value: 'low', label: 'منخفضة' }
-      ]
+        { value: "high", label: "عالية" },
+        { value: "normal", label: "عادية" },
+        { value: "low", label: "منخفضة" },
+      ],
     },
-    { 
-      id: 'current_status', 
-      label: 'الحالة', 
-      type: 'select',
+    {
+      id: "current_status",
+      label: "الحالة",
+      type: "select",
       operators: operators.select,
       options: [
-        { value: 'initial', label: 'حالة أولية' },
-        { value: 'in_progress', label: 'قيد المعالجة' },
-        { value: 'completed', label: 'مكتملة' },
-        { value: 'cancelled', label: 'ملغية' }
-      ]
+        { value: "initial", label: "حالة أولية" },
+        { value: "in_progress", label: "قيد المعالجة" },
+        { value: "completed", label: "مكتملة" },
+        { value: "cancelled", label: "ملغية" },
+      ],
     },
-    { 
-      id: 'direction', 
-      label: 'الاتجاه', 
-      type: 'select',
+    {
+      id: "direction",
+      label: "الاتجاه",
+      type: "select",
       operators: operators.select,
       options: [
-        { value: 'Incoming', label: 'وارد' },
-        { value: 'Outgoing', label: 'صادر' }
-      ]
-    }
+        { value: "Incoming", label: "وارد" },
+        { value: "Outgoing", label: "صادر" },
+      ],
+    },
   ];
 
   // Load filter options
@@ -115,12 +115,14 @@ const AdvancedFilterModal = ({
         try {
           const [typesResponse, usersResponse] = await Promise.all([
             correspondenceTypesApi.getAll(),
-            peopleApi.getAll()
+            peopleApi.getAll(),
           ]);
-          setCorrespondenceTypes(typesResponse.data?.results || typesResponse.data || []);
+          setCorrespondenceTypes(
+            typesResponse.data?.results || typesResponse.data || []
+          );
           setUsers(usersResponse.data?.results || usersResponse.data || []);
         } catch (error) {
-          console.error('Error loading filter options:', error);
+          console.error("Error loading filter options:", error);
         } finally {
           setLoading(false);
         }
@@ -138,22 +140,22 @@ const AdvancedFilterModal = ({
   const addFilter = () => {
     const newFilter = {
       id: Date.now(),
-      field: '',
-      operator: '',
-      value: '',
-      logic: localFilters.length > 0 ? globalLogic : null
+      field: "",
+      operator: "",
+      value: "",
+      logic: localFilters.length > 0 ? globalLogic : null,
     };
     setLocalFilters([...localFilters, newFilter]);
   };
 
   const removeFilter = (filterId) => {
-    setLocalFilters(localFilters.filter(f => f.id !== filterId));
+    setLocalFilters(localFilters.filter((f) => f.id !== filterId));
   };
 
   const updateFilter = (filterId, updates) => {
-    setLocalFilters(localFilters.map(f => 
-      f.id === filterId ? { ...f, ...updates } : f
-    ));
+    setLocalFilters(
+      localFilters.map((f) => (f.id === filterId ? { ...f, ...updates } : f))
+    );
   };
 
   const applyPredefinedFilter = (predefinedFilter) => {
@@ -162,17 +164,17 @@ const AdvancedFilterModal = ({
 
   const handleApply = () => {
     // Validate filters before applying
-    const validFilters = localFilters.filter(f => f.field && f.operator);
+    const validFilters = localFilters.filter((f) => f.field && f.operator);
     if (validFilters.length === 0) {
       return;
     }
-    
+
     // Add global logic to filters
     const filtersWithLogic = validFilters.map((filter, index) => ({
       ...filter,
-      logic: index === 0 ? null : globalLogic
+      logic: index === 0 ? null : globalLogic,
     }));
-    
+
     onFiltersChange(filtersWithLogic);
     onApply(filtersWithLogic);
     onClose();
@@ -185,7 +187,7 @@ const AdvancedFilterModal = ({
   };
 
   const getFieldConfig = (fieldId) => {
-    return fields.find(f => f.id === fieldId);
+    return fields.find((f) => f.id === fieldId);
   };
 
   const renderValueInput = (filter) => {
@@ -193,38 +195,40 @@ const AdvancedFilterModal = ({
     if (!fieldConfig || !filter.operator) return null;
 
     switch (fieldConfig.type) {
-      case 'text':
+      case "text":
         return (
           <TextField
             fullWidth
-            value={filter.value || ''}
+            value={filter.value || ""}
             onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
             placeholder={`أدخل ${fieldConfig.label}`}
             variant="outlined"
             sx={{ minWidth: 200 }}
           />
         );
-      
-      case 'date':
+
+      case "date":
         return (
           <TextField
             fullWidth
             type="date"
-            value={filter.value || ''}
+            value={filter.value || ""}
             onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
             InputLabelProps={{ shrink: true }}
             variant="outlined"
             sx={{ minWidth: 200 }}
           />
         );
-      
-      case 'select':
+
+      case "select":
         return (
           <FormControl fullWidth sx={{ minWidth: 200 }}>
             <InputLabel>اختر القيمة</InputLabel>
             <Select
-              value={filter.value || ''}
-              onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
+              value={filter.value || ""}
+              onChange={(e) =>
+                updateFilter(filter.id, { value: e.target.value })
+              }
               label="اختر القيمة"
             >
               {fieldConfig.options?.map((option) => (
@@ -235,28 +239,45 @@ const AdvancedFilterModal = ({
             </Select>
           </FormControl>
         );
-      
+
       default:
         return null;
     }
   };
 
-  const activeFiltersCount = localFilters.filter(f => 
-    f.field && f.operator && (f.value !== '' || ['is_empty', 'is_not_empty', 'this_month', 'last_month', 'this_year'].includes(f.operator))
+  const activeFiltersCount = localFilters.filter(
+    (f) =>
+      f.field &&
+      f.operator &&
+      (f.value !== "" ||
+        [
+          "is_empty",
+          "is_not_empty",
+          "this_month",
+          "last_month",
+          "this_year",
+        ].includes(f.operator))
   ).length;
 
   return (
-    <Dialog 
-      open={open} 
+    <Dialog
+      open={open}
       onClose={onClose}
       maxWidth="md"
       fullWidth
       PaperProps={{
-        sx: { minHeight: '400px' }
+        sx: { minHeight: "400px" },
       }}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', pb: 1 }}>
-        <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+      <DialogTitle
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          pb: 1,
+        }}
+      >
+        <Typography variant="h6" sx={{ fontWeight: "bold" }}>
           فلترة متقدمة
         </Typography>
         <IconButton onClick={onClose} size="small">
@@ -268,19 +289,19 @@ const AdvancedFilterModal = ({
         {/* Global Logic Selection */}
         {localFilters.length > 1 && (
           <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: "bold" }}>
               طريقة ربط الشروط:
             </Typography>
             <ButtonGroup size="small" sx={{ mb: 2 }}>
-              <Button 
-                variant={globalLogic === 'AND' ? 'contained' : 'outlined'}
-                onClick={() => setGlobalLogic('AND')}
+              <Button
+                variant={globalLogic === "AND" ? "contained" : "outlined"}
+                onClick={() => setGlobalLogic("AND")}
               >
                 جميع الشروط (AND)
               </Button>
-              <Button 
-                variant={globalLogic === 'OR' ? 'contained' : 'outlined'}
-                onClick={() => setGlobalLogic('OR')}
+              <Button
+                variant={globalLogic === "OR" ? "contained" : "outlined"}
+                onClick={() => setGlobalLogic("OR")}
               >
                 أي شرط (OR)
               </Button>
@@ -290,27 +311,43 @@ const AdvancedFilterModal = ({
 
         {/* Filters */}
         <Box>
-          
           {localFilters.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ textAlign: "center", py: 4 }}
+            >
               لا توجد فلاتر. اضغط "إضافة فلتر" لبدء الفلترة.
             </Typography>
           ) : (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 3 }}>
               {localFilters.map((filter, index) => (
-                <Paper key={filter.id} elevation={1} sx={{ p: 2, border: '1px solid', borderColor: 'divider' }}>
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                <Paper
+                  key={filter.id}
+                  elevation={1}
+                  sx={{ p: 2, border: "1px solid", borderColor: "divider" }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 2,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
                     {/* Field */}
                     <FormControl sx={{ minWidth: 200 }}>
                       <InputLabel>الحقل</InputLabel>
                       <Select
-                        value={filter.field || ''}
+                        value={filter.field || ""}
                         label="الحقل"
-                        onChange={(e) => updateFilter(filter.id, { 
-                          field: e.target.value, 
-                          operator: '', 
-                          value: '' 
-                        })}
+                        onChange={(e) =>
+                          updateFilter(filter.id, {
+                            field: e.target.value,
+                            operator: "",
+                            value: "",
+                          })
+                        }
                       >
                         {fields.map((field) => (
                           <MenuItem key={field.id} value={field.id}>
@@ -324,19 +361,22 @@ const AdvancedFilterModal = ({
                     <FormControl sx={{ minWidth: 150 }}>
                       <InputLabel>المشغل</InputLabel>
                       <Select
-                        value={filter.operator || ''}
+                        value={filter.operator || ""}
                         label="المشغل"
-                        onChange={(e) => updateFilter(filter.id, { 
-                          operator: e.target.value, 
-                          value: '' 
-                        })}
+                        onChange={(e) =>
+                          updateFilter(filter.id, {
+                            operator: e.target.value,
+                            value: "",
+                          })
+                        }
                         disabled={!filter.field}
                       >
-                        {filter.field && getFieldConfig(filter.field)?.operators.map((op) => (
-                          <MenuItem key={op.value} value={op.value}>
-                            {op.label}
-                          </MenuItem>
-                        ))}
+                        {filter.field &&
+                          getFieldConfig(filter.field)?.operators.map((op) => (
+                            <MenuItem key={op.value} value={op.value}>
+                              {op.label}
+                            </MenuItem>
+                          ))}
                       </Select>
                     </FormControl>
 
@@ -355,11 +395,17 @@ const AdvancedFilterModal = ({
                       <DeleteIcon />
                     </IconButton>
                   </Box>
-                  
+
                   {/* Show logic indicator for multiple filters */}
                   {index > 0 && (
-                    <Typography variant="caption" color="primary" sx={{ mt: 1, display: 'block' }}>
-                      {globalLogic === 'AND' ? 'و (جميع الشروط السابقة)' : 'أو (أي من الشروط السابقة)'}
+                    <Typography
+                      variant="caption"
+                      color="primary"
+                      sx={{ mt: 1, display: "block" }}
+                    >
+                      {globalLogic === "AND"
+                        ? "و (جميع الشروط السابقة)"
+                        : "أو (أي من الشروط السابقة)"}
                     </Typography>
                   )}
                 </Paper>
@@ -367,7 +413,7 @@ const AdvancedFilterModal = ({
             </Box>
           )}
 
-          <Box sx={{ mt: 3, textAlign: 'center' }}>
+          <Box sx={{ mt: 3, textAlign: "center" }}>
             <Button
               variant="outlined"
               startIcon={<AddIcon />}
@@ -381,7 +427,7 @@ const AdvancedFilterModal = ({
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: 3, gap: 2, justifyContent: 'space-between' }}>
+      <DialogActions sx={{ p: 3, gap: 2, justifyContent: "space-between" }}>
         <Button
           variant="outlined"
           color="error"
@@ -391,12 +437,9 @@ const AdvancedFilterModal = ({
         >
           مسح الكل
         </Button>
-        
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button
-            variant="outlined"
-            onClick={onClose}
-          >
+
+        <Box sx={{ display: "flex", gap: 2 }}>
+          <Button variant="outlined" onClick={onClose}>
             إلغاء
           </Button>
           <Button

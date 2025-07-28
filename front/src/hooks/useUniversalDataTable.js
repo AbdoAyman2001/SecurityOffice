@@ -18,15 +18,11 @@ export const useUniversalDataTable = ({
   const [columnFilters, setColumnFilters] = useState({});
   const [advancedFilters, setAdvancedFilters] = useState([]);
   const [sortConfig, setSortConfig] = useState(initialSort);
-  
-  // Removed throttling - user wants unlimited requests
-  
+    
   // Cache for column unique values
   const [columnValuesCache, setColumnValuesCache] = useState({});
   
   const loadingRef = useRef(false);
-
-
 
   // Fetch data function with infinite scroll support
   const fetchData = useCallback(async (pageNum = 1, append = false) => {
@@ -614,6 +610,7 @@ export const useUniversalDataTable = ({
   
   // Reload data when filters, search, or sort change - use refs to avoid dependency loops
   const prevFiltersRef = useRef();
+  const prevAdvancedFiltersRef = useRef();
   const prevSearchRef = useRef();
   const prevSortRef = useRef();
   
@@ -625,6 +622,7 @@ export const useUniversalDataTable = ({
     // Check if this is not the initial render and something actually changed
     if (prevFiltersRef.current !== undefined && (
       prevFiltersRef.current !== currentFilters ||
+      prevAdvancedFiltersRef.current !== currentAdvancedFilters ||
       prevSearchRef.current !== searchTerm ||
       prevSortRef.current !== currentSort
     )) {
@@ -637,6 +635,7 @@ export const useUniversalDataTable = ({
     
     // Update refs
     prevFiltersRef.current = currentFilters;
+    prevAdvancedFiltersRef.current = currentAdvancedFilters;
     prevSearchRef.current = searchTerm;
     prevSortRef.current = currentSort;
   }, [searchTerm, columnFilters, advancedFilters, sortConfig]);
