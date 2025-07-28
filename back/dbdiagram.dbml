@@ -1,0 +1,311 @@
+// ______________________________________ PEOPLE ______________________________________
+Table People_History {
+  note:'''
+    - This table is used for storing the people's information regardless they are family member or worker
+  '''
+  PersonRecordID int [pk, increment, note: 'Primary key for this specific historical record.']
+  PersonGUID uuid [not null, note: 'The permanent, unchanging ID for an individual. Links all their records together.']
+
+  // Personal details that can change over time
+  FullNameArabic nvarchar(255) [not null]
+  FullNameEnglish varchar(255)
+  Nationality varchar(50)
+  NationalID varchar(50)
+  AccessAreas varchar(50)
+  DateOfBirth date
+  Qualification varchar(50)
+  IdAddress varchar(255)
+  Alive boolean [default:true]
+  IdScan varchar(255) [note:'link to the image of the Id']
+  FaceEncodings VECTOR [note:'for face recognition']
+  SCRequestLetter int [ref: > Correspondence.CorrespondenceId, note:'The letter the sc request was made']
+  ResponseLetter int [ref: > Correspondence.CorrespondenceId, note:'The number that we mentioned to respond on the Person with the Approval']
+
+  // --- Version Control Columns ---
+  StartDate datetime [not null, note: 'The date this version of the information became effective.']
+  EndDate datetime [note: 'NULL means this is the current, active version.']
+  IsCurrent boolean [not null, default: true, note: 'Flag to easily find the current version.']
+  Version int [not null, note: 'Version number for this person\'s personal data history.']
+}
+Table Employment_History {
+  EmploymentRecordID int [pk, increment]
+  PersonGUID uuid [not null, ref: > People_History.PersonGUID, note: 'Links this job record back to the person in People_History.']
+  CompanyID int [not null, ref: > Companies.CompanyID]
+
+  // Job-specific details
+  JobTitle varchar(100)
+  StillHired boolean [default: true]
+
+  // Version Control Columns
+  StartDate datetime [not null, note: 'When this job record became active.']
+  EndDate datetime [note: 'Null means this is the current job record.']
+  IsCurrent boolean [not null, default: true, note: 'Flag for the current job.']
+  Version int [not null, note: 'Version number for this person\'s employment history.']
+}
+Table FamilyRelationships {
+  RelationshipID int [pk, increment]
+  WorkerPersonGUID uuid [not null, ref: > People_History.PersonGUID, note: 'The GUID of the person who is the employee.']
+  FamilyMemberPersonGUID uuid [not null, ref: > People_History.PersonGUID, note: 'The GUID of the person who is the family member.']
+  RelationshipType varchar [not null, note: 'e.g., Spouse, Son, Daughter']
+  Status varchar [not null, default: 'Active', note: 'e.g., Active, Left, Deceased']
+  ProofDocumentURL varchar [note: 'Link to the scanned proof document.']
+}
+// _______________________________________________________________________________________________
+// |
+// |
+// |
+//______________________________________ Companies ______________________________________
+Table Companies {
+  CompanyID int [pk, increment]
+  CompanyName varchar(255) [not null, unique]
+  ContactInfo varchar(255)
+}
+//___________________________________________________________________________________________
+// |
+// |
+// |
+//______________________________________ CORRESPONDENCE _____________________________________
+Table CorrespondenceTypes {
+  correspondence_type_id serial [pk]
+  type_name varchar(255)
+  category varchar(50) [note: 'General, Russian']
+  
+  Note: 'Types of correspondence'
+}
+
+Table CorrespondenceTypeProcedure {
+  id serial [pk]
+  correspondence_type_id int [not null]
+  procedure_name varchar(255) [not null, note: 'Name of the procedure/status step']
+  procedure_order int [default: 0, note: 'Order of this procedure in the workflow']
+  is_initial boolean [default: false, note: 'True if this is the initial status']
+  is_final boolean [default: false, note: 'True if this is a final status']
+  description text [note: 'Description of what happens in this procedure']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  Indexes {
+    (correspondence_type_id, procedure_name) [unique]
+  }
+  
+  Note: 'Procedures/statuses for each correspondence type'
+}
+
+Table Contacts {
+  contact_id serial [pk]
+  name varchar(255)
+  contact_type varchar(50) [default: 'Person', note: 'Specifies if the contact is an individual or an official body.']
+  is_approver boolean [default: false, note: 'True if this contact (must be an Organization) has the authority to approve permits.']
+  
+  Note: 'Contacts for correspondence'
+}
+
+Table Correspondence {
+  correspondence_id serial [pk]
+  parent_correspondence_id int [null, note: 'Self-referencing foreign key for related correspondence']
+  reference_number varchar(255)
+  contact int 
+  correspondence_date date
+  type_id int [null, note: 'Foreign key to CorrespondenceTypes']
+  subject varchar(255)
+  direction varchar(50) [note: 'Incoming, Outgoing, Internal; the flow of the correspondence']
+  priority varchar(10) [default: 'normal', note: 'high, normal, low']
+  summary varchar(1000)
+  current_status_id int [null, note: 'Foreign key to CorrespondenceTypeProcedure; Current status/procedure of this correspondence']
+  assigned_to_id int [null, note: 'Foreign key to Django Auth User model']
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+
+  Indexes {
+    (reference_number, correspondence_date) [unique]
+  }
+  
+  Note: 'Main correspondence table'
+}
+
+Table CorrespondenceStatusLog {
+  id serial [pk]
+  correspondence_id int [not null]
+  form_status_name varchar(200)
+  to_status_name varchar(200)
+  changed_by_id int [null, note: 'Foreign key to Django Auth User model']
+  change_reason text [note: 'Optional reason for the status change']
+  created_at timestamp [default: `now()`]
+  
+  Note: 'Log of status changes for correspondence tracking'
+}
+
+Table Attachments {
+  attachment_id serial [pk]
+  correspondence_id int [not null]
+  file varchar(255) [note: 'Path to uploaded file']
+  file_name varchar(255) [note: 'Original filename']
+  file_type varchar(100) [note: 'MIME type']
+  file_size bigint [note: 'File size in bytes']
+  uploaded_at timestamp [default: `now()`]
+  
+  Note: 'File attachments for correspondence'
+}
+
+// Assuming settings.AUTH_USER_MODEL maps to a 'users' or 'auth_user' table
+// Adjust 'auth_user' if your custom user model has a different table name
+Table auth_user {
+  id serial [pk]
+  username varchar(150) [unique]
+  // ... other user fields
+  Note: 'Django Auth User Model'
+}
+
+// Relationships
+Ref: CorrespondenceTypeProcedure.correspondence_type_id > CorrespondenceTypes.correspondence_type_id [delete: cascade]
+Ref: Correspondence.type_id > CorrespondenceTypes.correspondence_type_id [delete: restrict]
+Ref: Correspondence.current_status_id > CorrespondenceTypeProcedure.id [delete: restrict]
+Ref: Correspondence.parent_correspondence_id > Correspondence.correspondence_id [delete: set null]
+Ref: Contacts.contact_id < Correspondence.contact [delete: restrict]
+
+Ref: CorrespondenceStatusLog.correspondence_id > Correspondence.correspondence_id [delete: cascade]
+Ref: Attachments.correspondence_id > Correspondence.correspondence_id [delete: cascade]
+
+// but we will use the soft delete method so that the deletion is forbidden but the 
+// if the admin tried to delete some user we will make it soft delete
+Ref: Correspondence.assigned_to_id > auth_user.id [delete: restrict]
+Ref: CorrespondenceStatusLog.changed_by_id > auth_user.id [delete: restrict]
+
+// ___________________________________________________________________________________________
+// |
+// |
+// |
+// ______________________________________ Approval ___________________________________________
+Table Permits {
+  PermitID int [pk, increment]
+  PermitHolderType enum('Person', 'Company') [not null, note: 'Specifies if the permit is for a person or a company.']
+  PersonGUID uuid [ref: > People_History.PersonGUID, note:'FK to People_History. Filled if PermitHolderType is Person.']
+  CompanyID int [ref: > Companies.CompanyID, note:'FK to Companies. Filled if PermitHolderType is Company.']
+  
+  PermitStatus enum('Pending', 'Active', 'Rejected', 'Expired', 'Revoked') [not null, default: 'Pending', note: 'Overall status derived from the ApprovalDecisions.']
+  EffectiveDate date [note: 'When the permit becomes active.']
+  ExpiryDate date [note: 'When the permit expires.']
+  
+  note: 'A single permit request for an entity (person or company) to gain site access.'
+}
+
+Table ApprovalDecisions {
+  ApprovalDecisionID int [pk, increment]
+  PermitID int [not null, ref: > Permits.PermitID]
+  ApproverContactId int [not null, ref: > Contacts.ContactId, note: 'FK to the Contact (of type Organization) that is the official approver.'] // Changed from ApproverID
+  
+  DecisionStatus enum('Pending', 'Approved', 'Rejected') [not null, default: 'Pending']
+  DecisionDate datetime
+  CorrespondenceId int [ref: > Correspondence.CorrespondenceId, note: 'Link to the formal letter of approval/rejection. NULL if verbal.']
+  Notes varchar(1000) [note: 'Required for verbal approvals.']
+  
+  indexes {
+    (PermitID, ApproverContactId) [unique] // Changed from ApproverID
+  }
+}
+// ___________________________________________________________________________________________
+// |
+// |
+// |
+// ______________________________________ Accidents ___________________________________________
+Table Accidents { 
+  AccidentId int [pk, increment]
+  Description varchar(4096)
+  PersonGUID uuid [ref: > People_History.PersonGUID, note:'FK to People_History. Filled if PermitHolderType is Person.']
+  Address varchar(1024)  
+  Date date 
+}
+// ___________________________________________________________________________________________
+// |
+// |
+// |
+// ______________________________________ Relocation _________________________________________
+Table Relocation { 
+  RelocationId int [pk, increment]
+  RelocationLetter int [ref: > Correspondence.CorrespondenceId]
+  PersonGUID uuid [ref: > People_History.PersonGUID, note:'FK to People_History. Filled if PermitHolderType is Person.']
+  ApprovalStatus enum("انتظار","حاصل")
+  BuildingNumber int
+  BuildingLetter enum("A","B","C","D")
+  FlatNumber int
+}
+Table RelocationPeriod { 
+  RelocationPeriodId int [pk, increment]
+  RelocationId int [ref: > Relocation.RelocationId]
+  StartDate date 
+  EndDate date
+}
+// ___________________________________________________________________________________________
+// |
+// |
+// |
+// ______________________________________ Cars _________________________________________
+Table Vehicle { 
+  VehicleId int [increment]
+  Organization enum("Owner","Contractor")
+  CorrespondenceId int [ref: > Correspondence.CorrespondenceId]
+  PlateNumber varchar(10)
+  StartDate date
+  EndDate date
+  Company int [ref: > Companies.CompanyID]
+  indexes {
+    (VehicleId,Organization) [pk]
+  }
+}
+Table CarPermit { 
+  CarPermitId int [pk, increment]
+  VehicleId int [ref: > Vehicle.VehicleId]
+  StartDate date
+  EndDate date
+}
+// ___________________________________________________________________________________________
+// |
+// |
+// |
+// ______________________________________ CardPermits  _______________________________________
+Table CardPermits { // Renamed from 'Permits'
+  permit_id int [pk, increment]
+  permit_number varchar(50) [not null, unique] // Unique identifier for the physical card
+  permit_type enum("Temporary", "Permanent")
+  PersonGUID uuid [ref: > People_History.PersonGUID, note:'FK to People_History. Filled if PermitHolderType is Person.']
+  issue_date date [not null]
+  expiration_date date
+  status varchar(20) [not null, default: 'Active'] // Consider ENUM if supported by your DB: 'Active', 'Expired', 'Revoked', 'Lost'
+  notes text
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+Table CardPhotos {
+  photo_id int [pk, increment]
+  permit_id int [not null, unique] // One photo per permit
+  file_name varchar(255) [not null] // Original file name
+  file_path varchar(500) [not null] // Path or URL to the stored image file (e.g., S3 URL, local server path)
+  file_size_bytes bigint
+  mime_type varchar(50) // e.g., 'image/jpeg', 'image/png'
+  uploaded_at timestamp [default: `now()`]
+}
+
+Ref: CardPhotos.permit_id > CardPermits.permit_id [delete: cascade] // Updated reference
+
+// ___________________________________________________________________________________________
+// |
+// |
+// |
+// ______________________________________ SETTINGS _______________________________________
+Table Settings {
+  id int [pk, increment]
+  key varchar(100) [not null, unique, note: 'Setting key/name']
+  value text [not null, note: 'Setting value']
+  setting_type varchar(20) [not null, default: 'text', note: 'Type: text, number, boolean, json, file']
+  description text [note: 'Description of this setting']
+  category varchar(50) [not null, default: 'general', note: 'Setting category']
+  is_active boolean [not null, default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp [default: `now()`]
+}
+
+// ___________________________________________________________________________________________
+// |
+// |
+// |

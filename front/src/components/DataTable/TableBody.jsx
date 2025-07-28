@@ -1,0 +1,133 @@
+import React from 'react';
+import {
+  TableBody,
+  TableRow,
+  TableCell,
+  Typography,
+  Skeleton
+} from '@mui/material';
+import CellRenderer from './CellRenderer';
+import ActionButtons from './ActionButtons';
+
+const DataTableBody = ({
+  data,
+  loading,
+  visibleColumns,
+  columns,
+  enableActions,
+  emptyMessage,
+  getRowBackgroundColor,
+  getRowHoverColor,
+  showLoadingSkeletons,
+  enableInlineEdit,
+  canEdit,
+  canView,
+  onUpdateItem,
+  onViewItem,
+  onEditItem,
+  customCellRenderers
+}) => {
+  // Loading skeleton renderer
+  const renderLoadingSkeleton = () => {
+    if (!showLoadingSkeletons) return null;
+
+    return Array.from({ length: 3 }).map((_, index) => (
+      <TableRow key={`skeleton-${index}`}>
+        {visibleColumns.map((column) => (
+          <TableCell key={column.id}>
+            <Skeleton variant="text" width="80%" />
+          </TableCell>
+        ))}
+        {enableActions && (
+          <TableCell>
+            <Skeleton variant="rectangular" width={80} height={32} />
+          </TableCell>
+        )}
+      </TableRow>
+    ));
+  };
+
+  // Get row key for React key prop
+  const getRowKey = (row, index) => {
+    return (
+      row[columns.find((c) => c.primaryKey)?.id] ||
+      row.id ||
+      row.correspondence_id ||
+      index
+    );
+  };
+
+  return (
+    <TableBody>
+      {data.length === 0 && !loading ? (
+        <TableRow>
+          <TableCell
+            colSpan={visibleColumns.length + (enableActions ? 1 : 0)}
+            align="center"
+          >
+            <Typography
+              variant="body1"
+              color="textSecondary"
+              sx={{ p: 4 }}
+            >
+              {emptyMessage}
+            </Typography>
+          </TableCell>
+        </TableRow>
+      ) : (
+        <>
+          {data.map((row, index) => {
+            const rowKey = getRowKey(row, index);
+
+            return (
+              <TableRow
+                key={rowKey}
+                sx={{
+                  backgroundColor: getRowBackgroundColor(row),
+                  "&:hover": {
+                    backgroundColor: getRowHoverColor(row),
+                  },
+                }}
+              >
+                {visibleColumns.map((column) => (
+                  <TableCell
+                    key={column.id}
+                    sx={{
+                      width: column.width,
+                      minWidth: column.minWidth || 100,
+                    }}
+                  >
+                    <CellRenderer
+                      row={row}
+                      column={column}
+                      enableInlineEdit={enableInlineEdit}
+                      canEdit={canEdit}
+                      onUpdateItem={onUpdateItem}
+                      customCellRenderers={customCellRenderers}
+                    />
+                  </TableCell>
+                ))}
+
+                {enableActions && (
+                  <TableCell sx={{ width: 120 }}>
+                    <ActionButtons
+                      row={row}
+                      canView={canView}
+                      canEdit={canEdit}
+                      onViewItem={onViewItem}
+                      onEditItem={onEditItem}
+                    />
+                  </TableCell>
+                )}
+              </TableRow>
+            );
+          })}
+
+          {loading && renderLoadingSkeleton()}
+        </>
+      )}
+    </TableBody>
+  );
+};
+
+export default DataTableBody;
