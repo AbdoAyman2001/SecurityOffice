@@ -127,21 +127,46 @@ class ContactsViewSet(viewsets.ModelViewSet):
 
 
 class CorrespondenceViewSet(viewsets.ModelViewSet):
-    queryset = Correspondence.objects.all()
+    queryset = Correspondence.objects.select_related(
+        'type', 'contact', 'current_status', 'assigned_to', 'parent_correspondence'
+    ).all()
     serializer_class = CorrespondenceSerializer
     authentication_classes = [TokenAuthentication]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    
+    # Enhanced search fields for better search functionality
     search_fields = [
         'reference_number', 'subject', 'summary',
-        'contact__name', 'type__type_name', 'assigned_to__full_name_arabic'
+        'contact__name', 'type__type_name', 'assigned_to__full_name_arabic',
+        'assigned_to__username', 'current_status__procedure_name'
     ]
-    filterset_fields = [
-        'direction', 'priority', 'correspondence_date', 'reference_number',
+    
+    # Fixed filterset_fields to support frontend filtering with __in lookups
+    filterset_fields = {
+        # Direct field filters
+        'direction': ['exact', 'in'],
+        'priority': ['exact', 'in'], 
+        'correspondence_date': ['exact', 'gte', 'lte', 'in'],
+        'reference_number': ['exact', 'icontains', 'in'],
+        'created_at': ['exact', 'gte', 'lte'],
+        'updated_at': ['exact', 'gte', 'lte'],
+        
+        # Related field filters with __in support for frontend
+        'type__type_name': ['exact', 'in', 'icontains'],
+        'contact__name': ['exact', 'in', 'icontains'],
+        'current_status__procedure_name': ['exact', 'in', 'icontains'],
+        'assigned_to__full_name_arabic': ['exact', 'in', 'icontains'],
+        'assigned_to__username': ['exact', 'in', 'icontains'],
+        'parent_correspondence__reference_number': ['exact', 'in', 'icontains'],
+    }
+    
+    # Enhanced ordering fields to support all columns
+    ordering_fields = [
+        'correspondence_id', 'correspondence_date', 'reference_number', 
+        'priority', 'direction', 'subject', 'created_at', 'updated_at',
         'type__type_name', 'contact__name', 'current_status__procedure_name',
-        'assigned_to__full_name_arabic', 'assigned_to__username',
-        'parent_correspondence__reference_number', 'created_at', 'updated_at'
+        'assigned_to__full_name_arabic', 'parent_correspondence__reference_number'
     ]
-    ordering_fields = ['correspondence_date', 'reference_number', 'priority']
     ordering = ['-correspondence_date']
     
     def get_permissions(self):

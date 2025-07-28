@@ -75,7 +75,7 @@ const UniversalDataTable = ({
   customCellRenderers = {},
 
   // Table configuration
-  pageSize = 50,
+  pageSize = 20,
   emptyMessage = "لا توجد بيانات",
   loadingMessage = "جاري تحميل المزيد...",
 
@@ -219,27 +219,51 @@ const UniversalDataTable = ({
 
   // Create a single, stable intersection observer that doesn't depend on changing values
   const observerRef = useRef(null);
-  
+
+  // Create refs to store current values for the intersection observer
+  const hasMoreStateRef = useRef(hasMore);
+  const loadingStateRef = useRef(loading);
+  const dataStateRef = useRef(data);
+  const onLoadMoreStateRef = useRef(onLoadMore);
+
+  // Update refs whenever values change
+  useEffect(() => {
+    hasMoreStateRef.current = hasMore;
+  }, [hasMore]);
+
+  useEffect(() => {
+    loadingStateRef.current = loading;
+  }, [loading]);
+
+  useEffect(() => {
+    dataStateRef.current = data;
+  }, [data]);
+
+  useEffect(() => {
+    onLoadMoreStateRef.current = onLoadMore;
+  }, [onLoadMore]);
+
   // Initialize the observer only once
   useEffect(() => {
     if (!observerRef.current) {
-      console.log('🔄 Creating IntersectionObserver (ONCE ONLY)');
-      
+      console.log("🔄 Creating IntersectionObserver (ONCE ONLY)");
+
       // Create a stable callback that reads current values from refs
       const stableCallback = (entries) => {
         const [entry] = entries;
-        
-        // Read current values directly instead of relying on closure
-        const currentHasMore = hasMore;
-        const currentLoading = loading;
-        const currentDataLength = data.length;
-        
+
+        // Read current values from refs to avoid stale closure
+        const currentHasMore = hasMoreStateRef.current;
+        const currentLoading = loadingStateRef.current;
+        const currentDataLength = dataStateRef.current.length;
+        const currentOnLoadMore = onLoadMoreStateRef.current;
+
         console.log("Intersection Observer triggered:", {
           isIntersecting: entry.isIntersecting,
           hasMore: currentHasMore,
           loading: currentLoading,
           isLoadingRef: isLoadingRef.current,
-          onLoadMore: !!onLoadMore,
+          onLoadMore: !!currentOnLoadMore,
           dataLength: currentDataLength,
         });
 
@@ -249,7 +273,7 @@ const UniversalDataTable = ({
           currentHasMore &&
           !currentLoading &&
           !isLoadingRef.current &&
-          onLoadMore &&
+          currentOnLoadMore &&
           currentDataLength > 0 // Only trigger if we have data already
         ) {
           isLoadingRef.current = true;
@@ -261,51 +285,51 @@ const UniversalDataTable = ({
             "dataLength:",
             currentDataLength
           );
-          onLoadMore();
+          currentOnLoadMore();
         } else {
-          console.log('❌ Not triggering loadMore - conditions not met:', {
+          console.log("❌ Not triggering loadMore - conditions not met:", {
             isIntersecting: entry.isIntersecting,
             hasMore: currentHasMore,
             loading: currentLoading,
             isLoadingRef: isLoadingRef.current,
-            hasOnLoadMore: !!onLoadMore,
-            hasData: currentDataLength > 0
+            hasOnLoadMore: !!currentOnLoadMore,
+            hasData: currentDataLength > 0,
           });
         }
       };
-      
+
       observerRef.current = new IntersectionObserver(stableCallback, {
         threshold: 0.1,
         rootMargin: "50px",
       });
     }
-    
+
     return () => {
       if (observerRef.current) {
-        console.log('🧹 Cleaning up IntersectionObserver on unmount');
+        console.log("🧹 Cleaning up IntersectionObserver on unmount");
         observerRef.current.disconnect();
         observerRef.current = null;
       }
     };
   }, []); // Empty dependency array - create only once!
-  
+
   // Observe/unobserve the loading element based on data availability
   useEffect(() => {
     if (!observerRef.current || !loadingRef.current || !enableInfiniteScroll) {
       return;
     }
-    
+
     if (data.length > 0) {
-      console.log('👁️ Observing loading element', { dataLength: data.length });
+      console.log("👁️ Observing loading element", { dataLength: data.length });
       observerRef.current.observe(loadingRef.current);
     } else {
-      console.log('👁️ Not observing - no data yet');
+      console.log("👁️ Not observing - no data yet");
       observerRef.current.unobserve(loadingRef.current);
     }
-    
+
     return () => {
       if (observerRef.current && loadingRef.current) {
-        console.log('👁️ Unobserving loading element');
+        console.log("👁️ Unobserving loading element");
         observerRef.current.unobserve(loadingRef.current);
       }
     };
@@ -429,12 +453,14 @@ const UniversalDataTable = ({
             onViewItem={onViewItem}
             onEditItem={onEditItem}
             customCellRenderers={customCellRenderers}
+            searchTerm={searchTerm}
           />
         </Table>
         {/* Infinite scroll loading indicator */}
         {enableInfiniteScroll && (
           <div ref={loadingRef} style={{ height: "20px", margin: "10px 0" }}>
-            {loading && data.length > 0 && (
+            {/* Only show loading spinner when we have more data AND we're actually loading */}
+            {loading && hasMore && data.length > 0 && (
               <Box
                 sx={{
                   display: "flex",
@@ -446,6 +472,33 @@ const UniversalDataTable = ({
                 <CircularProgress size={24} />
                 <Typography variant="body2" sx={{ ml: 1 }}>
                   {loadingMessage}
+                </Typography>
+              </Box>
+            )}
+            {/* End of data message - show when no more data available */}
+            {!hasMore && data.length > 0 && (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  color: "text.secondary",
+                  backgroundColor: "grey.50",
+                  borderRadius: 1,
+                  border: "1px solid",
+                  borderColor: "grey.200",
+                  margin: 0,
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontStyle: "italic",
+                    fontWeight: 500,
+                    textAlign: "center",
+                  }}
+                >
+                  🏁 تم عرض جميع البيانات المتاحة
                 </Typography>
               </Box>
             )}

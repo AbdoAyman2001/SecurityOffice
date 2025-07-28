@@ -45,7 +45,7 @@ const RussianLetters = () => {
   } = useUniversalDataTable({
     apiService: correspondenceApi,
     defaultFilters: { direction: "Incoming" }, // Russian letters filter
-    pageSize: 50,
+    pageSize: 20, // Match the pageSize passed to UniversalDataTable component
     initialSort: { field: "correspondence_date", direction: "desc" },
   });
 
@@ -139,50 +139,63 @@ const RussianLetters = () => {
 
       {/* Universal Data Table */}
       <UniversalDataTable
+        
         // Data props
         data={letters}
         loading={loading}
         error={error}
         hasMore={hasMore}
         totalCount={totalCount}
+        
         // Column configuration
         columns={russianLettersColumns}
+        
         // Infinite scroll
         onLoadMore={loadMore}
+        
         // Sorting
         sortConfig={sortConfig}
         onSort={handleSort}
+        
         // Filtering
         columnFilters={columnFilters}
         onColumnFilter={handleColumnFilter}
         onClearColumnFilter={handleClearColumnFilter}
         getColumnUniqueValues={getColumnUniqueValues}
+        
         // Advanced filtering
         advancedFilters={advancedFilters}
+        
         // Search
         searchTerm={searchTerm}
         onSearch={handleSearch}
+        
         // Actions
         onUpdateItem={updateItem}
         onViewItem={handleViewItem}
         onEditItem={handleEditItem}
+        
         // Customization
         enableInlineEdit={true}
         enableActions={true}
         enableFilters={true}
         enableSort={true}
         enableInfiniteScroll={true}
+        
         // Styling
         stickyHeader={true}
         highlightPriority={true}
         showLoadingSkeletons={true}
+        
         // Permissions
         canEdit={canEditCorrespondence()}
         canView={isAuthenticated}
+        
         // Table configuration
-        pageSize={50}
+        pageSize={20}
         emptyMessage="لا توجد خطابات روسية"
         loadingMessage="جاري تحميل المزيد من الخطابات..."
+
         // Column visibility
         enableColumnVisibility={true}
         columnVisibilityStorageKey="russianLetters_columnVisibility"

@@ -11,6 +11,7 @@ import {
   History as HistoryIcon
 } from '@mui/icons-material';
 import InlineEditCell from '../RussianLetters/InlineEditCell';
+import HighlightedText from './HighlightedText';
 
 const CellRenderer = ({
   row,
@@ -18,7 +19,8 @@ const CellRenderer = ({
   enableInlineEdit,
   canEdit,
   onUpdateItem,
-  customCellRenderers
+  customCellRenderers,
+  searchTerm = ''
 }) => {
   // Get cell value with fallback
   const getCellValue = (row, column) => {
@@ -56,12 +58,21 @@ const CellRenderer = ({
         normal: 'عادية',
         low: 'منخفضة'
       };
+      const priorityDisplayLabel = priorityLabels[value] || value;
       return (
         <Chip
-          label={priorityLabels[value] || value}
+          label={priorityDisplayLabel}
           color={priorityColors[value] || 'default'}
           size="small"
           variant="outlined"
+          sx={{
+            // Highlight chip if search term matches
+            ...(searchTerm && priorityDisplayLabel.toLowerCase().includes(searchTerm.toLowerCase()) && {
+              backgroundColor: 'primary.light',
+              fontWeight: 'bold',
+              boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.3)'
+            })
+          }}
         />
       );
 
@@ -76,11 +87,20 @@ const CellRenderer = ({
         Outgoing: 'صادر',
         Internal: 'داخلي'
       };
+      const directionDisplayLabel = directionLabels[value] || value;
       return (
         <Chip
-          label={directionLabels[value] || value}
+          label={directionDisplayLabel}
           color={directionColors[value] || 'default'}
           size="small"
+          sx={{
+            // Highlight chip if search term matches
+            ...(searchTerm && directionDisplayLabel.toLowerCase().includes(searchTerm.toLowerCase()) && {
+              backgroundColor: 'primary.light',
+              fontWeight: 'bold',
+              boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.3)'
+            })
+          }}
         />
       );
 
@@ -131,9 +151,12 @@ const CellRenderer = ({
         );
       }
       return (
-        <Typography variant="body2" color="primary" sx={{ cursor: 'pointer' }}>
-          {value}
-        </Typography>
+        <HighlightedText
+          text={value}
+          searchTerm={searchTerm}
+          variant="body2"
+          sx={{ color: 'primary.main', cursor: 'pointer' }}
+        />
       );
 
     case 'date':
@@ -190,7 +213,9 @@ const CellRenderer = ({
       if (column.multiline && value && value.length > 50) {
         return (
           <Tooltip title={value}>
-            <Typography
+            <HighlightedText
+              text={value}
+              searchTerm={searchTerm}
               variant="body2"
               sx={{
                 maxWidth: column.width || 200,
@@ -199,17 +224,17 @@ const CellRenderer = ({
                 whiteSpace: 'nowrap',
                 cursor: 'help'
               }}
-            >
-              {value}
-            </Typography>
+            />
           </Tooltip>
         );
       }
 
       return (
-        <Typography variant="body2">
-          {value}
-        </Typography>
+        <HighlightedText
+          text={value}
+          searchTerm={searchTerm}
+          variant="body2"
+        />
       );
   }
 };

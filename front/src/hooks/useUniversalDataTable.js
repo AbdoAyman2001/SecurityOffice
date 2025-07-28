@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 export const useUniversalDataTable = ({
   apiService,
   defaultFilters = {},
-  pageSize = 50,
+  pageSize = 20,
   initialSort = { field: null, direction: null }
 }) => {
   const [data, setData] = useState([]);
@@ -19,11 +19,7 @@ export const useUniversalDataTable = ({
   const [advancedFilters, setAdvancedFilters] = useState([]);
   const [sortConfig, setSortConfig] = useState(initialSort);
   
-  // Request throttling safety measures
-  const lastRequestTimeRef = useRef(0);
-  const requestCountRef = useRef(0);
-  const MIN_REQUEST_INTERVAL = 500; // Minimum 500ms between requests
-  const MAX_REQUESTS_PER_MINUTE = 20; // Maximum 20 requests per minute
+  // Removed throttling - user wants unlimited requests
   
   // Cache for column unique values
   const [columnValuesCache, setColumnValuesCache] = useState({});
@@ -34,29 +30,15 @@ export const useUniversalDataTable = ({
 
   // Fetch data function with infinite scroll support
   const fetchData = useCallback(async (pageNum = 1, append = false) => {
-    if (loadingRef.current && append) return;
+    console.log('🚀 fetchData called:', { pageNum, append, loadingRef: loadingRef.current });
     
-    // Request throttling safety check
-    const now = Date.now();
-    if (now - lastRequestTimeRef.current < MIN_REQUEST_INTERVAL) {
-      console.log('Request throttled - too soon since last request');
+    // Don't start a new request if we're already loading (but allow the current request to complete)
+    if (loadingRef.current && !append) {
+      console.log('⏸️ Skipping fetchData - already loading and not appending');
       return;
     }
     
-    // Check request count per minute
-    requestCountRef.current++;
-    if (requestCountRef.current > MAX_REQUESTS_PER_MINUTE) {
-      console.error('Too many requests per minute - blocking request');
-      setError('تم إجراء عدد كبير جداً من الطلبات. يرجى الانتظار قليلاً.');
-      return;
-    }
-    
-    // Reset request count every minute
-    setTimeout(() => {
-      requestCountRef.current = Math.max(0, requestCountRef.current - 1);
-    }, 60000);
-    
-    lastRequestTimeRef.current = now;
+    // No throttling - user wants unlimited requests
     loadingRef.current = true;
     setLoading(true);
     setError(null);
@@ -181,21 +163,75 @@ export const useUniversalDataTable = ({
         params[key] === undefined && delete params[key]
       );
       
-      const response = await apiService.getAll(params);
+      console.log('📋 API Request params:', params);
+      console.log('🌐 Making API request...');
+      
+      // Add timeout to prevent hanging requests
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          console.log('⏰ Request timeout triggered after 10 seconds');
+          reject(new Error('Request timeout after 10 seconds'));
+        }, 10000);
+      });
+      
+      let response;
+      try {
+        console.log('🚀 Starting API call...');
+        response = await Promise.race([
+          apiService.getAll(params),
+          timeoutPromise
+        ]);
+        console.log('✅ API call completed successfully');
+      } catch (apiError) {
+        console.log('❌ API call failed:', apiError);
+        throw apiError;
+      }
       const responseData = response.data;
       const newItems = responseData.results || responseData || [];
+      
+      console.log('✅ API Response received:', {
+        resultsCount: newItems.length,
+        totalCount: responseData.count,
+        hasNext: Boolean(responseData.next),
+        nextUrl: responseData.next,
+        hasPrevious: Boolean(responseData.previous),
+        pageNum,
+        append,
+        rawResponse: responseData
+      });
+      
+      // Immediate check: if this is an append request and we got 0 items, we've reached the end
+      if (append && newItems.length === 0) {
+        console.log('🔚 End of data detected - no new items returned for append request');
+        setHasMore(false);
+        setLoading(false);
+        loadingRef.current = false;
+        return;
+      }
       
       // Store the updated data in a local variable to avoid stale closure issues
       let updatedData;
       
+      console.log('🔄 Processing data update:', {
+        append,
+        newItemsLength: newItems.length,
+        currentDataLength: data.length
+      });
+      
       if (append) {
-        // Update data using functional form to ensure we have the latest state
-        setData(prevData => {
-          updatedData = [...prevData, ...newItems];
-          return updatedData;
+        // Calculate updatedData first, then update state
+        updatedData = [...data, ...newItems];
+        console.log('📊 Appending data:', {
+          previousLength: data.length,
+          newItemsLength: newItems.length,
+          updatedLength: updatedData.length
         });
+        setData(updatedData);
       } else {
         updatedData = newItems;
+        console.log('🔄 Replacing data:', {
+          newLength: updatedData.length
+        });
         setData(updatedData);
         setCurrentPage(1);
       }
@@ -205,40 +241,93 @@ export const useUniversalDataTable = ({
       // Calculate the total data length using the updatedData variable, not the stale data reference
       const totalDataLength = updatedData.length;
       
-      // Corrected hasMore logic - trust the backend pagination
-      // Django REST Framework provides responseData.next when there are more pages
-      // We should primarily rely on this, with additional safety checks
-      const hasMoreData = Boolean(
-        responseData.next && // Backend says there's a next page (most reliable indicator)
-        newItems.length > 0   // We got some results (safety check)
-        // Note: Don't check pageSize here - backend might return exactly pageSize items
-        // and still have more data. Trust responseData.next from DRF pagination.
-      );
+      // Fixed hasMore logic - using responseData.next since API does provide it correctly
+      const hasMoreData = Boolean(responseData.next);
+      
+      console.log('🔍 hasMoreData calculation:', {
+        responseDataNext: responseData.next,
+        hasMoreData: hasMoreData
+      });
+      
+      // Alternative: If API provides total count, use that for accurate calculation
+      let hasMoreBasedOnCount = false;
+      if (responseData.count && typeof responseData.count === 'number') {
+        // Use updatedData.length which is the correct total after appending
+        const totalItemsLoaded = updatedData.length;
+        hasMoreBasedOnCount = totalItemsLoaded < responseData.count;
+        
+        console.log('📊 Count-based hasMore calculation:', {
+          totalItemsLoaded,
+          totalCount: responseData.count,
+          hasMoreBasedOnCount
+        });
+      }
+      
+      // Use the more reliable calculation
+      const finalHasMore = hasMoreData;
+      
+      console.log('🔍 Final hasMore decision:', {
+        hasMoreData,
+        finalHasMore,
+        willSetHasMore: finalHasMore
+      });
       
       console.log('🔍 fetchData completed - hasMore calculation:', {
         pageNum,
         append,
         newItemsLength: newItems.length,
         pageSize,
-        hasNext: Boolean(responseData.next),
         totalCount: responseData.count,
         currentDataLength: totalDataLength,
         dataLengthBeforeAppend: data.length,
         hasMoreCalculation: {
-          hasNext: Boolean(responseData.next),
           hasResults: newItems.length > 0,
-          pageSize: pageSize,
-          actualItemsReceived: newItems.length,
-          finalHasMore: hasMoreData,
-          logic: 'hasMore = hasNext && hasResults (trusting backend pagination)'
+          gotFullPage: newItems.length === pageSize,
+          totalItemsLoaded: append ? (data.length + newItems.length) : newItems.length,
+          hasMoreBasedOnCount: hasMoreBasedOnCount,
+          hasMoreBasedOnPageSize: hasMoreData,
+          finalHasMore: finalHasMore,
+          logic: 'hasMore = (totalLoaded < totalCount) OR (got full page size)'
         }
       });
       
-      setHasMore(hasMoreData);
+      setHasMore(finalHasMore);
       
     } catch (err) {
-      console.error('Error fetching data:', err);
-      setError('فشل في تحميل البيانات');
+      console.error('❌ Error fetching data:', {
+        error: err,
+        message: err.message,
+        response: err.response,
+        status: err.response?.status,
+        statusText: err.response?.statusText,
+        data: err.response?.data,
+        pageNum,
+        append,
+        params
+      });
+      
+      // If this is an append request and we get an error, assume we've reached the end
+      if (append) {
+        console.log('🔚 Error on append request - assuming end of data reached');
+        setHasMore(false);
+      }
+      
+      // More specific error messages based on error type
+      if (err.response?.status === 404) {
+        setError('الصفحة المطلوبة غير موجودة');
+        // 404 on append definitely means no more data
+        if (append) setHasMore(false);
+      } else if (err.response?.status === 500) {
+        setError('خطأ في الخادم - يرجى المحاولة لاحقاً');
+      } else if (err.response?.status === 403) {
+        setError('ليس لديك صلاحية للوصول إلى هذه البيانات');
+      } else if (err.message?.includes('timeout')) {
+        setError('انتهت مهلة الطلب - يرجى المحاولة مرة أخرى');
+        // On timeout for append, assume end of data to prevent infinite retries
+        if (append) setHasMore(false);
+      } else {
+        setError(`فشل في تحميل البيانات: ${err.message || 'خطأ غير معروف'}`);
+      }
     } finally {
       setLoading(false);
       loadingRef.current = false;
@@ -313,31 +402,32 @@ export const useUniversalDataTable = ({
     }
   }, [apiService]);
 
-  // Debounced requests for column unique values to prevent flooding
+  // Batch processing for column unique values to prevent flooding
   const pendingColumnRequests = useRef(new Map());
+  const batchRequestTimer = useRef(null);
+  const pendingBatchColumns = useRef(new Set());
   
-  // Get unique values for column filters (with caching and debouncing)
-  const getColumnUniqueValues = useCallback(async (column) => {
-    // Check cache first
-    if (columnValuesCache[column]) {
-      return columnValuesCache[column];
-    }
-
-    // Check if there's already a pending request for this column
-    if (pendingColumnRequests.current.has(column)) {
-      return pendingColumnRequests.current.get(column);
-    }
-
-    // Create the request promise
-    const requestPromise = (async () => {
-      try {
-        // Use a smaller page size and limit to prevent overwhelming the backend
-        const response = await apiService.getAll({
-          page_size: 100, // Reduced from 1000
-          ...defaultFilters
-        });
-        
-        const allData = response.data.results || response.data || [];
+  // Optimized batch processing of column unique values
+  const processBatchColumnRequests = useCallback(async () => {
+    if (pendingBatchColumns.current.size === 0) return;
+    
+    const columnsToProcess = Array.from(pendingBatchColumns.current);
+    pendingBatchColumns.current.clear();
+    
+    console.log('🔄 Processing batch column requests for:', columnsToProcess);
+    
+    try {
+      // Make a single request to get data for all columns
+      const response = await apiService.getAll({
+        page_size: 200, // Larger page size for batch processing
+        ...defaultFilters
+      });
+      
+      const allData = response.data.results || response.data || [];
+      const columnValuesMap = {};
+      
+      // Process all columns from the single dataset
+      columnsToProcess.forEach(column => {
         const uniqueValues = new Set();
         
         allData.forEach(item => {
@@ -347,59 +437,81 @@ export const useUniversalDataTable = ({
           }
         });
         
-        // Limit additional page fetching to prevent request flooding
-        if (response.data.next && uniqueValues.size < 50) { // Reduced limit
-          let nextUrl = response.data.next;
-          let pageCount = 1;
-          
-          while (nextUrl && pageCount < 2) { // Reduced from 5 to 2
-            try {
-              const nextResponse = await fetch(nextUrl, {
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('authToken')}`, // Fixed token key
-                  'Content-Type': 'application/json'
-                }
-              });
-              const nextData = await nextResponse.json();
-              
-              (nextData.results || []).forEach(item => {
-                let value = getNestedValue(item, column);
-                if (value !== null && value !== undefined && value !== '') {
-                  uniqueValues.add(value);
-                }
-              });
-              
-              nextUrl = nextData.next;
-              pageCount++;
-            } catch (error) {
-              console.warn('Error fetching additional pages for column values:', error);
-              break;
-            }
-          }
+        columnValuesMap[column] = Array.from(uniqueValues).sort();
+      });
+      
+      // Update cache with all processed columns
+      setColumnValuesCache(prev => ({
+        ...prev,
+        ...columnValuesMap
+      }));
+      
+      // Resolve all pending promises
+      columnsToProcess.forEach(column => {
+        const promise = pendingColumnRequests.current.get(column);
+        if (promise && promise.resolve) {
+          promise.resolve(columnValuesMap[column] || []);
         }
-        
-        const sortedValues = Array.from(uniqueValues).sort();
-        
-        // Cache the values
-        setColumnValuesCache(prev => ({
-          ...prev,
-          [column]: sortedValues
-        }));
-        
-        return sortedValues;
-      } catch (error) {
-        console.error('Error fetching column unique values:', error);
-        return [];
-      } finally {
-        // Remove from pending requests
         pendingColumnRequests.current.delete(column);
-      }
-    })();
+      });
+      
+    } catch (error) {
+      console.error('Error in batch column processing:', error);
+      
+      // Reject all pending promises
+      columnsToProcess.forEach(column => {
+        const promise = pendingColumnRequests.current.get(column);
+        if (promise && promise.reject) {
+          promise.reject(error);
+        }
+        pendingColumnRequests.current.delete(column);
+      });
+    }
+  }, [apiService, defaultFilters]);
+  
+  // Get unique values for column filters (with batching and caching)
+  const getColumnUniqueValues = useCallback(async (column) => {
+    // Check cache first
+    if (columnValuesCache[column]) {
+      // console.log('✅ Using cached values for column:', column);
+      return columnValuesCache[column];
+    }
 
-    // Store the promise to prevent duplicate requests
-    pendingColumnRequests.current.set(column, requestPromise);
+    // Check if there's already a pending request for this column
+    if (pendingColumnRequests.current.has(column)) {
+      // console.log('⏳ Waiting for existing request for column:', column);
+      return pendingColumnRequests.current.get(column).promise;
+    }
+
+    // Create a promise that will be resolved by batch processing
+    let resolvePromise, rejectPromise;
+    const promise = new Promise((resolve, reject) => {
+      resolvePromise = resolve;
+      rejectPromise = reject;
+    });
     
-    return requestPromise;
+    // Store the promise with resolve/reject functions
+    pendingColumnRequests.current.set(column, {
+      promise,
+      resolve: resolvePromise,
+      reject: rejectPromise
+    });
+    
+    // Add to batch processing queue
+    pendingBatchColumns.current.add(column);
+    // console.log('📝 Added column to batch queue:', column, 'Queue size:', pendingBatchColumns.current.size);
+    
+    // Clear existing timer and set a new one for batch processing
+    if (batchRequestTimer.current) {
+      clearTimeout(batchRequestTimer.current);
+    }
+    
+    // Process batch after a short delay to collect more columns
+    batchRequestTimer.current = setTimeout(() => {
+      processBatchColumnRequests();
+    }, 100); // 100ms delay to batch multiple requests
+    
+    return promise;
   }, [apiService, defaultFilters, columnValuesCache]);
 
   // Helper function to get nested values from objects - Updated for correct field mappings

@@ -371,9 +371,9 @@ class Attachments(models.Model):
     """File attachments for correspondence"""
     attachment_id = models.AutoField(primary_key=True)
     correspondence = models.ForeignKey(Correspondence, on_delete=models.CASCADE, related_name='attachments')
-    file = models.FileField(upload_to=attachment_upload_path, help_text='Uploaded file')
-    file_name = models.CharField(max_length=255, help_text='Original filename')
-    file_type = models.CharField(max_length=100, blank=True, null=True, help_text='mime type')
+    file = models.FileField(upload_to=attachment_upload_path, help_text='Uploaded file', max_length=2048)
+    file_name = models.CharField(max_length=1024, help_text='Original filename')
+    file_type = models.CharField(max_length=1024, blank=True, null=True, help_text='mime type')
     file_size = models.BigIntegerField(blank=True, null=True, help_text='File size in bytes')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     
@@ -594,8 +594,8 @@ class CardPhotos(models.Model):
     """Photos associated with card permits"""
     photo_id = models.AutoField(primary_key=True)
     permit = models.OneToOneField(CardPermits, on_delete=models.CASCADE, help_text='One photo per permit')
-    file_name = models.CharField(max_length=255, help_text='Original file name')
-    file_path = models.CharField(max_length=500, help_text='Path or URL to the stored image file')
+    file_name = models.CharField(max_length=2048, help_text='Original file name')
+    file_path = models.CharField(max_length=2048, help_text='Path or URL to the stored image file')
     file_size_bytes = models.BigIntegerField(blank=True, null=True)
     mime_type = models.CharField(max_length=50, blank=True, null=True, help_text='e.g., image/jpeg, image/png')
     uploaded_at = models.DateTimeField(auto_now_add=True)

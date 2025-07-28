@@ -25,7 +25,8 @@ const DataTableBody = ({
   onUpdateItem,
   onViewItem,
   onEditItem,
-  customCellRenderers
+  customCellRenderers,
+  searchTerm = ''
 }) => {
   // Loading skeleton renderer
   const renderLoadingSkeleton = () => {
@@ -104,6 +105,7 @@ const DataTableBody = ({
                       canEdit={canEdit}
                       onUpdateItem={onUpdateItem}
                       customCellRenderers={customCellRenderers}
+                      searchTerm={searchTerm}
                     />
                   </TableCell>
                 ))}
