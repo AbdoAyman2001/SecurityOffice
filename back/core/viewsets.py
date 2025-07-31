@@ -5,6 +5,12 @@ from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django.contrib.auth import get_user_model
+from django.http import HttpResponse
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
+from datetime import datetime
+import io
 from .models import (
     PeopleHistory, CompaniesHistory, EmploymentHistory, FamilyRelationships,
     CorrespondenceTypes, Contacts, Correspondence,
@@ -232,16 +238,150 @@ class CorrespondenceViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def summary(self, request):
         """Get correspondence summary for listings"""
-        correspondences = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(correspondences)
+        queryset = self.filter_queryset(self.get_queryset())
+        
+        # Apply pagination
+        page = self.paginate_queryset(queryset)
         if page is not None:
             serializer = CorrespondenceSummarySerializer(page, many=True)
             return self.get_paginated_response(serializer.data)
-        serializer = CorrespondenceSummarySerializer(correspondences, many=True)
+        
+        serializer = CorrespondenceSummarySerializer(queryset, many=True)
         return Response(serializer.data)
-
-
-
+    
+    @action(detail=False, methods=['get'])
+    def export_excel(self, request):
+        """Export all correspondence data to Excel without pagination"""
+        # Get all filtered data without pagination, sorted by ID ascending
+        queryset = self.filter_queryset(self.get_queryset()).order_by('correspondence_id')
+        
+        # Create workbook and worksheet
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Russian Letters"
+        
+        # Define headers based on the frontend column configuration
+        headers = [
+            'كود الخطاب',  # correspondence_id
+            'الرقم المرجعي',   # reference_number
+            'تاريخ الخطاب',  # correspondence_date
+            'جهة المخاطبة',    # contact
+            'النوع',         # type
+            'الموضوع',       # subject
+            'الاتجاه',       # direction
+            'الأولوية',      # priority
+            'الحالة الحالية', # current_status
+            'مُكلف إلى',     # assigned_to
+            'ملخص الخطاب',        # summary
+            'المرفقات',      # attachments
+            'تاريخ الإضافة إلى المنظومة',  # created_at
+            'تاريخ آخر تحديث'   # updated_at
+        ]
+        
+        # Style the header row
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        header_alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Add headers
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num, value=header)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+        
+        # Add data rows
+        for row_num, correspondence in enumerate(queryset, 2):
+            # Format data according to the frontend display logic
+            row_data = [
+                correspondence.correspondence_id,
+                correspondence.reference_number or 'غير محدد',
+                correspondence.correspondence_date.strftime('%d/%m/%Y') if correspondence.correspondence_date else 'غير محدد',
+                correspondence.contact.name if correspondence.contact else 'غير محدد',
+                correspondence.type.type_name if correspondence.type else 'غير محدد',
+                correspondence.subject or 'غير محدد',
+                self._get_direction_label(correspondence.direction),
+                self._get_priority_label(correspondence.priority),
+                correspondence.current_status.procedure_name if correspondence.current_status else 'غير محدد',
+                correspondence.assigned_to.full_name_arabic if correspondence.assigned_to and hasattr(correspondence.assigned_to, 'full_name_arabic') else (correspondence.assigned_to.username if correspondence.assigned_to else 'غير مُكلف'),
+                correspondence.summary or 'لا يوجد ملخص',
+                self._get_attachment_names(correspondence),
+                correspondence.created_at.strftime('%d/%m/%Y %H:%M') if correspondence.created_at else 'غير محدد',
+                correspondence.updated_at.strftime('%d/%m/%Y %H:%M') if correspondence.updated_at else 'غير محدد'
+            ]
+            
+            for col_num, value in enumerate(row_data, 1):
+                cell = ws.cell(row=row_num, column=col_num, value=value)
+                cell.alignment = Alignment(horizontal="center", vertical="center")
+        
+        # Auto-adjust column widths
+        for column in ws.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)  # Cap at 50 characters
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Create HTTP response with Excel file
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
+        # Generate filename with current date
+        filename = f"russian_letters_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        # Save workbook to response
+        wb.save(response)
+        return response
+    
+    def _get_direction_label(self, direction):
+        """Convert direction value to Arabic label"""
+        direction_map = {
+            'Incoming': 'وارد',
+            'Outgoing': 'صادر',
+            'Internal': 'داخلي'
+        }
+        return direction_map.get(direction, direction or 'غير محدد')
+    
+    def _get_priority_label(self, priority):
+        """Convert priority value to Arabic label"""
+        priority_map = {
+            'high': 'عالية',
+            'normal': 'عادية',
+            'low': 'منخفضة'
+        }
+        return priority_map.get(priority, priority or 'عادية')
+    
+    def _get_attachment_names(self, correspondence):
+        """Get attachment names as comma-separated list"""
+        try:
+            if hasattr(correspondence, 'attachments'):
+                attachment_names = []
+                for attachment in correspondence.attachments.all():
+                    # Use file_name if available, otherwise use the filename from the file field
+                    name = getattr(attachment, 'file_name', None) or getattr(attachment, 'original_filename', None)
+                    if name:
+                        attachment_names.append(name)
+                    elif hasattr(attachment, 'file') and attachment.file:
+                        # Extract filename from file path
+                        import os
+                        attachment_names.append(os.path.basename(attachment.file.name))
+                
+                if attachment_names:
+                    return '\n'.join(attachment_names)
+                else:
+                    return 'لا توجد مرفقات'
+            else:
+                return 'لا توجد مرفقات'
+        except Exception as e:
+            # Fallback in case of any error
+            return 'خطأ في تحميل المرفقات'
 
 
 class AttachmentsViewSet(viewsets.ModelViewSet):

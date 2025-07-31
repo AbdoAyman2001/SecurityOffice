@@ -28,9 +28,10 @@ const InlineEditCell = ({
   displayValue,
   fieldName,
   rowId,
-  maxWidth = 200,
   multiline = false,
-  required = false
+  required = false,
+  textDirection = 'rtl',
+  textAlign = 'right'
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value);
@@ -169,6 +170,12 @@ const InlineEditCell = ({
             rows={multiline ? 2 : 1}
             autoFocus
             required={required}
+            sx={{
+              '& .MuiInputBase-input': {
+                direction: textDirection,
+                textAlign: textAlign,
+              }
+            }}
           />
         );
     }
@@ -181,7 +188,7 @@ const InlineEditCell = ({
           display: 'flex', 
           alignItems: 'center', 
           gap: 1,
-          maxWidth,
+          width: '100%',
           cursor: editable ? 'pointer' : 'default'
         }}
         onClick={handleStartEdit}
@@ -193,6 +200,7 @@ const InlineEditCell = ({
             textOverflow: 'ellipsis',
             whiteSpace: multiline ? 'normal' : 'nowrap',
             flex: 1,
+            minWidth: 0,
             margin: 0,
             fontSize: '0.875rem',
             lineHeight: 1.43,
@@ -213,8 +221,8 @@ const InlineEditCell = ({
   }
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, maxWidth }}>
-      <Box sx={{ flex: 1 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+      <Box sx={{ flex: 1, minWidth: 0 }}>
         {renderEditControl()}
       </Box>
       <Box sx={{ display: 'flex', gap: 0.5 }}>

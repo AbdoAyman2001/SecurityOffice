@@ -31,21 +31,59 @@ const TableHeader = ({
   return (
     <TableHead>
       <TableRow>
-        {visibleColumns.map((column) => (
-          <TableCell
-            key={column.id}
-            sx={{
-              width: column.width,
-              minWidth: column.minWidth || 100,
-              backgroundColor: "primary.main",
-              color: "white",
-              fontWeight: 600,
-              position: stickyHeader ? "sticky" : "static",
-              top: 0,
-              zIndex: 100,
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        {visibleColumns.map((column) => {
+          // Build dynamic styles based on column configuration
+          const cellStyles = {
+            backgroundColor: "primary.main",
+            color: "white",
+            fontWeight: 600,
+            position: stickyHeader ? "sticky" : "static",
+            top: 0,
+            zIndex: 100,
+          };
+
+          // Apply optimized width configurations
+          if (column.calculatedWidth) {
+            cellStyles.width = column.calculatedWidth;
+          } else if (column.calculatedFlex) {
+            cellStyles.flex = column.calculatedFlex;
+            if (column.calculatedMinWidth) {
+              cellStyles.minWidth = column.calculatedMinWidth;
+            }
+            if (column.calculatedMaxWidth) {
+              cellStyles.maxWidth = column.calculatedMaxWidth;
+            }
+          } else {
+            // Fallback to original column configuration
+            if (column.width) {
+              cellStyles.width = column.width;
+            }
+            if (column.minWidth) {
+              cellStyles.minWidth = column.minWidth;
+            }
+            if (column.maxWidth) {
+              cellStyles.maxWidth = column.maxWidth;
+            }
+            if (column.flex) {
+              cellStyles.flex = column.flex;
+            }
+          }
+
+          return (
+            <TableCell
+              key={column.id}
+              sx={{
+                ...cellStyles,
+                borderRight: '1px solid rgba(224, 224, 224, 0.4)',
+                borderBottom: '1px solid rgba(224, 224, 224, 0.6)'
+              }}
+            >
+            <Box sx={{ 
+                display: "flex", 
+                alignItems: "center", 
+                gap: 1,
+                width: '100%'
+              }}>
               {enableSort && column.sortable ? (
                 <TableSortLabel
                   active={sortConfig.field === column.id}
@@ -60,12 +98,34 @@ const TableHeader = ({
                     "& .MuiTableSortLabel-icon": {
                       color: "white !important",
                     },
+                    width: '100%',
+                    justifyContent: (column.headerTextAlign || column.textAlign) === 'left' ? 'flex-start' : 
+                                   (column.headerTextAlign || column.textAlign) === 'right' ? 'flex-end' : 'center',
+                  }}
+                >
+                  <Typography 
+                    variant="subtitle2" 
+                    sx={{ 
+                      textAlign: column.headerTextAlign || column.textAlign || 'center',
+                      direction: column.headerTextDirection || column.textDirection || 'rtl',
+                      width: '100%'
+                    }}
+                  >
+                    {column.label}
+                  </Typography>
+                </TableSortLabel>
+              ) : (
+                <Typography 
+                  variant="subtitle2" 
+                  sx={{ 
+                    textAlign: column.headerTextAlign || column.textAlign || 'center',
+                    direction: column.headerTextDirection || column.textDirection || 'rtl',
+                    width: '100%',
+                    color: 'white'
                   }}
                 >
                   {column.label}
-                </TableSortLabel>
-              ) : (
-                column.label
+                </Typography>
               )}
 
               {enableFilters &&
@@ -81,8 +141,9 @@ const TableHeader = ({
                   />
                 )}
             </Box>
-          </TableCell>
-        ))}
+            </TableCell>
+          );
+        })}
 
         {enableActions && (
           <TableCell
@@ -94,6 +155,7 @@ const TableHeader = ({
               position: stickyHeader ? "sticky" : "static",
               top: 0,
               zIndex: 100,
+              borderBottom: '1px solid rgba(224, 224, 224, 0.6)'
             }}
           >
             <Box
@@ -103,7 +165,15 @@ const TableHeader = ({
                 justifyContent: "space-between",
               }}
             >
-              <Typography variant="body2" sx={{ color: "white" }}>
+              <Typography 
+                variant="subtitle2" 
+                sx={{ 
+                  textAlign: 'center',
+                  direction: 'rtl',
+                  width: '100%',
+                  color: "white"
+                }}
+              >
                 الإجراءات
               </Typography>
               {enableColumnVisibility && (

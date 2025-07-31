@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   TextField,
@@ -8,14 +8,16 @@ import {
   Stack,
   Typography,
   IconButton,
-  Tooltip
+  Tooltip,
+  CircularProgress
 } from '@mui/material';
 import {
   Search as SearchIcon,
   Clear as ClearIcon,
   FilterAlt as FilterIcon,
   Refresh as RefreshIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  FileDownload as FileDownloadIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,10 +33,50 @@ const SearchFilterBar = ({
   onToggleAdvancedFilters,
   loading,
   advancedFilters = [],
-  columnFilters = {}
+  columnFilters = {},
+  debounceDelay = 300, // Default 300ms debounce delay
+  // Export functionality
+  enableExport = false,
+  onExportExcel,
+  exportLoading = false
 }) => {
   const navigate = useNavigate();
   const { canEditCorrespondence } = useAuth();
+  
+  // Local state for the input value (immediate UI updates)
+  const [inputValue, setInputValue] = useState(searchTerm);
+  
+  // Update local input value when external searchTerm changes
+  useEffect(() => {
+    setInputValue(searchTerm);
+  }, [searchTerm]);
+  
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    (() => {
+      let timeoutId;
+      return (value) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          onSearch(value);
+        }, debounceDelay);
+      };
+    })(),
+    [onSearch, debounceDelay]
+  );
+  
+  // Handle input change with immediate UI update and debounced search
+  const handleInputChange = (e) => {
+    const value = e.target.value;
+    setInputValue(value); // Immediate UI update
+    debouncedSearch(value); // Debounced API call
+  };
+  
+  // Handle clear search with immediate effect
+  const handleClearSearch = () => {
+    setInputValue('');
+    onSearch(''); // Immediate clear, no debounce needed
+  };
 
   const handleAddLetter = () => {
     navigate('/forms/russian-letter');
@@ -64,6 +106,18 @@ const SearchFilterBar = ({
               <RefreshIcon />
             </IconButton>
           </Tooltip>
+          
+          {enableExport && onExportExcel && (
+            <Button
+              variant="outlined"
+              startIcon={exportLoading ? <CircularProgress size={16} /> : <FileDownloadIcon />}
+              onClick={onExportExcel}
+              disabled={exportLoading || loading}
+              sx={{ minWidth: 140 }}
+            >
+              {exportLoading ? 'جاري التصدير...' : 'تصدير Excel'}
+            </Button>
+          )}
 
           {canEditCorrespondence() && (
             <Button
@@ -85,8 +139,8 @@ const SearchFilterBar = ({
           <TextField
             fullWidth
             placeholder="البحث في جميع الحقول..."
-            value={searchTerm}
-            onChange={(e) => onSearch(e.target.value)}
+            value={inputValue}
+            onChange={handleInputChange}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -97,7 +151,7 @@ const SearchFilterBar = ({
                 <InputAdornment position="end">
                   <IconButton
                     size="small"
-                    onClick={() => onSearch('')}
+                    onClick={handleClearSearch}
                     edge="end"
                   >
                     <ClearIcon />
@@ -154,7 +208,7 @@ const SearchFilterBar = ({
                   <Chip
                     label={`البحث: "${searchTerm}"`}
                     size="small"
-                    onDelete={() => onSearch('')}
+                    onDelete={handleClearSearch}
                     color="primary"
                   />
                 )}

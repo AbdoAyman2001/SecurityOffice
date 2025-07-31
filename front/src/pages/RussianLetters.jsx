@@ -78,6 +78,34 @@ const RussianLetters = () => {
     console.log("Edit item:", row);
     // navigate(`/correspondence/${row.correspondence_id}/edit`);
   };
+  
+  // Excel export handler
+  const handleExportExcel = async (exportParams) => {
+    try {
+      // Prepare export parameters with current filters
+      const params = {
+        // Apply current search and filters to export
+        search: exportParams.searchTerm || '',
+        direction: 'Incoming', // Russian letters filter
+        ordering: exportParams.sortConfig?.field ? 
+          `${exportParams.sortConfig.direction === 'desc' ? '-' : ''}${exportParams.sortConfig.field}` : 
+          '-correspondence_date',
+        ...exportParams.columnFilters,
+      };
+      
+      // Add advanced filters if any
+      if (exportParams.advancedFilters && exportParams.advancedFilters.length > 0) {
+        exportParams.advancedFilters.forEach(filter => {
+          params[filter.field] = filter.value;
+        });
+      }
+      
+      await correspondenceApi.exportExcel(params);
+    } catch (error) {
+      console.error('Export failed:', error);
+      // You could add a toast notification here for better UX
+    }
+  };
 
   // Check permissions on mount
   useEffect(() => {
@@ -119,6 +147,9 @@ const RussianLetters = () => {
         loading={loading}
         advancedFilters={advancedFilters}
         columnFilters={columnFilters}
+        enableExport={true}
+        onExportExcel={handleExportExcel}
+        exportLoading={false}
       />
 
       {/* Advanced Filter Modal */}
@@ -176,6 +207,11 @@ const RussianLetters = () => {
         onUpdateItem={updateItem}
         onViewItem={handleViewItem}
         onEditItem={handleEditItem}
+        
+        // Export functionality (now handled by SearchFilterBar)
+        // onExportExcel={handleExportExcel}
+        // enableExport={true}
+        // exportFileName="russian_letters"
         
         // Customization
         enableInlineEdit={true}

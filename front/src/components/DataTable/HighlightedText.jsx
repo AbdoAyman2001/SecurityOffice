@@ -42,8 +42,19 @@ const HighlightedText = ({
     );
   }
 
+  // Make sure we properly apply the text direction and alignment from sx props
+  const { direction, textAlign, ...otherSx } = sx;
+  
   return (
-    <Typography variant={variant} sx={sx} {...props}>
+    <Typography 
+      variant={variant} 
+      sx={{
+        direction: direction || 'inherit',
+        textAlign: textAlign || 'inherit',
+        ...otherSx
+      }} 
+      {...props}
+    >
       {parts.map((part, index) => {
         // Check if this part matches the search term (case insensitive)
         const isMatch = part.toLowerCase() === cleanSearchTerm.toLowerCase();

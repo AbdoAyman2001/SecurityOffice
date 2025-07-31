@@ -1,13 +1,13 @@
-import React from 'react';
+import React from "react";
 import {
   TableBody,
   TableRow,
   TableCell,
   Typography,
-  Skeleton
-} from '@mui/material';
-import CellRenderer from './CellRenderer';
-import ActionButtons from './ActionButtons';
+  Skeleton,
+} from "@mui/material";
+import CellRenderer from "./CellRenderer";
+import ActionButtons from "./ActionButtons";
 
 const DataTableBody = ({
   data,
@@ -26,7 +26,8 @@ const DataTableBody = ({
   onViewItem,
   onEditItem,
   customCellRenderers,
-  searchTerm = ''
+  searchTerm = "",
+  textDirection = "rtl",
 }) => {
   // Loading skeleton renderer
   const renderLoadingSkeleton = () => {
@@ -66,11 +67,7 @@ const DataTableBody = ({
             colSpan={visibleColumns.length + (enableActions ? 1 : 0)}
             align="center"
           >
-            <Typography
-              variant="body1"
-              color="textSecondary"
-              sx={{ p: 4 }}
-            >
+            <Typography variant="body1" color="textSecondary" sx={{ p: 4 }}>
               {emptyMessage}
             </Typography>
           </TableCell>
@@ -94,8 +91,14 @@ const DataTableBody = ({
                   <TableCell
                     key={column.id}
                     sx={{
-                      width: column.width,
+                      width: column.calculatedFlex ? '40%' : column.width || 'auto',
                       minWidth: column.minWidth || 100,
+                      padding: '8px 16px',
+                      overflow: 'hidden',
+                      wordWrap: 'break-word',
+                      whiteSpace: 'normal',
+                      borderRight: '1px solid rgba(224, 224, 224, 0.3)',
+                      borderBottom: '1px solid rgba(224, 224, 224, 0.3)',
                     }}
                   >
                     <CellRenderer
@@ -106,12 +109,16 @@ const DataTableBody = ({
                       onUpdateItem={onUpdateItem}
                       customCellRenderers={customCellRenderers}
                       searchTerm={searchTerm}
+                      textDirection={textDirection}
                     />
                   </TableCell>
                 ))}
 
                 {enableActions && (
-                  <TableCell sx={{ width: 120 }}>
+                  <TableCell sx={{ 
+                    width: 120, 
+                    borderBottom: '1px solid rgba(224, 224, 224, 0.3)' 
+                  }}>
                     <ActionButtons
                       row={row}
                       canView={canView}

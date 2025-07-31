@@ -54,6 +54,10 @@ const UniversalDataTable = ({
   onUpdateItem,
   onViewItem,
   onEditItem,
+  
+  // Export functionality
+  onExportExcel,
+  enableExport = true,
 
   // Customization
   enableInlineEdit = true,
@@ -78,12 +82,16 @@ const UniversalDataTable = ({
   pageSize = 20,
   emptyMessage = "لا توجد بيانات",
   loadingMessage = "جاري تحميل المزيد...",
+  textDirection = "rtl", // Default text direction (rtl/ltr)
 
   // Column visibility
   enableColumnVisibility = true,
   columnVisibilityStorageKey = null,
   visibleColumns = {},
   onColumnVisibilityChange,
+  
+  // Export settings
+  exportFileName = "data_export",
 }) => {
   const navigate = useNavigate();
   const tableContainerRef = useRef(null);
@@ -91,6 +99,7 @@ const UniversalDataTable = ({
   const isLoadingRef = useRef(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [internalVisibleColumns, setInternalVisibleColumns] = useState({});
+  const [exportLoading, setExportLoading] = useState(false);
 
   // Initialize column visibility from localStorage or default values
   useEffect(() => {
@@ -143,6 +152,33 @@ const UniversalDataTable = ({
   const visibleColumnsArray = columns.filter(
     (column) => currentVisibleColumns[column.id] !== false
   );
+
+  // Simplified width distribution logic: small min widths, flex-grow on subject column
+  const calculateOptimalWidths = (columns) => {
+    if (!columns.length) return columns;
+    
+    return columns.map(column => {
+      const enhancedColumn = { ...column };
+      
+      // Subject column grows to fill remaining space
+      if (column.id === 'subject' || column.id.includes('subject')) {
+        enhancedColumn.calculatedFlex = 1;
+        enhancedColumn.calculatedMinWidth = column.minWidth || 150;
+      } else if (column.width) {
+        // Respect explicit width but bound
+        const width = typeof column.width === 'string' ? parseInt(column.width.replace('px', '')) : column.width;
+        enhancedColumn.calculatedWidth = Math.max(60, Math.min(width, 300));
+      } else {
+        // Default small min width, no flex
+        enhancedColumn.calculatedMinWidth = column.minWidth || 60;
+      }
+
+      return enhancedColumn;
+    });
+  };
+  
+  // Apply optimal width calculations
+  const optimizedColumns = calculateOptimalWidths(visibleColumnsArray);
 
   // Handle column visibility change
   const handleColumnVisibilityChange = (newVisibleColumns) => {
@@ -383,6 +419,30 @@ const UniversalDataTable = ({
       onEditItem={onEditItem}
     />
   );
+  
+  // Handle Excel export
+  const handleExportExcel = async () => {
+    if (!onExportExcel) {
+      console.warn('Excel export function not provided');
+      return;
+    }
+    
+    setExportLoading(true);
+    try {
+      // Pass current filters and search term to maintain consistency
+      await onExportExcel({
+        searchTerm,
+        columnFilters,
+        advancedFilters,
+        sortConfig,
+        fileName: exportFileName
+      });
+    } catch (error) {
+      console.error('Export failed:', error);
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   if (error) {
     return (
@@ -398,14 +458,16 @@ const UniversalDataTable = ({
         component={Paper}
         ref={tableContainerRef}
         sx={{
-          // maxHeight: "70vh",
-          overflow: "auto",
+          width: "100%",
+          overflowY: "auto",
+          overflowX: "hidden",
           "&::-webkit-scrollbar": {
             width: "8px",
             height: "8px",
           },
           "&::-webkit-scrollbar-track": {
             backgroundColor: "#f1f1f1",
+            borderRadius: "4px",
           },
           "&::-webkit-scrollbar-thumb": {
             backgroundColor: "#c1c1c1",
@@ -416,9 +478,16 @@ const UniversalDataTable = ({
           },
         }}
       >
-        <Table stickyHeader={stickyHeader}>
+        <Table 
+          stickyHeader={stickyHeader}
+          sx={{
+            tableLayout: 'fixed',
+            width: '100%',
+            minWidth: '100%'
+          }}
+        >
           <TableHeader
-            visibleColumns={visibleColumnsArray}
+            visibleColumns={optimizedColumns}
             sortConfig={sortConfig}
             onSort={onSort}
             enableSort={enableSort}
@@ -439,7 +508,7 @@ const UniversalDataTable = ({
           <DataTableBody
             data={data}
             loading={loading}
-            visibleColumns={visibleColumnsArray}
+            visibleColumns={optimizedColumns}
             columns={columns}
             enableActions={enableActions}
             emptyMessage={emptyMessage}
@@ -454,6 +523,7 @@ const UniversalDataTable = ({
             onEditItem={onEditItem}
             customCellRenderers={customCellRenderers}
             searchTerm={searchTerm}
+            textDirection={textDirection}
           />
         </Table>
         {/* Infinite scroll loading indicator */}

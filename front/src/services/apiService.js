@@ -124,10 +124,44 @@ export const correspondenceApi = {
   create: (data) => apiService.post('/correspondence/', data),
   update: (id, data) => apiService.put(`/correspondence/${id}/`, data),
   delete: (id) => apiService.delete(`/correspondence/${id}/`),
-  addContact: (correspondenceId, contactData) => apiService.post('/correspondence-contacts/', {
-    correspondence: correspondenceId,
-    ...contactData
-  }),
+  addContact: (correspondenceId, contactData) => {
+    return apiService.post(`/correspondence/${correspondenceId}/add_contact/`, contactData);
+  },
+  exportExcel: async (params = {}) => {
+    try {
+      const response = await apiService.get('/correspondence/export_excel/', {
+        params,
+        responseType: 'blob',
+        timeout: 60000, // 60 seconds timeout for large exports
+      });
+      
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Get filename from response headers or use default
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'russian_letters_export.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/); 
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      return { success: true, filename };
+    } catch (error) {
+      console.error('Excel export failed:', error);
+      throw error;
+    }
+  },
 };
 
 export const correspondenceTypesApi = {

@@ -11,7 +11,9 @@ export const russianLettersColumns = [
     width: 120,
     type: 'number',
     primaryKey: true,
-    visible: true, // Default visibility
+    visible: true,
+    textDirection: 'rtl',
+    textAlign: 'center',
     getValue: (row) => row.correspondence_id,
     defaultValue: 'غير محدد'
   },
@@ -20,10 +22,12 @@ export const russianLettersColumns = [
     label: 'الرقم المرجعي',
     sortable: true,
     filterable: true,
-    editable: true,
+    editable: false,
     width: 180,
     type: 'text',
     visible: true,
+    textDirection: 'rtl',
+    textAlign: 'center',
     getValue: (row) => row.reference_number || 'غير محدد',
     defaultValue: 'غير محدد'
   },
@@ -32,10 +36,12 @@ export const russianLettersColumns = [
     label: 'تاريخ المراسلة',
     sortable: true,
     filterable: true,
-    editable: true,
+    editable: false,
     width: 140,
     type: 'date',
     visible: true,
+    textDirection: 'rtl',
+    textAlign: 'center',
     getValue: (row) => row.correspondence_date || 'غير محدد',
     defaultValue: 'غير محدد'
   },
@@ -48,6 +54,8 @@ export const russianLettersColumns = [
     width: 150,
     type: 'text',
     visible: true,
+    textDirection: 'rtl',
+    textAlign: 'right',
     getValue: (row) => row.contact_name || 'غير محدد',
     defaultValue: 'غير محدد'
   },
@@ -56,10 +64,14 @@ export const russianLettersColumns = [
     label: 'النوع',
     sortable: true,
     filterable: true,
-    editable: true,
+    editable: false,
     width: 140,
     type: 'select',
     visible: true,
+    textDirection: 'rtl',
+    textAlign: 'center',
+    // Special header styling that's different from body
+    headerTextAlign: 'center',
     getValue: (row) => row.type_name || 'غير محدد',
     defaultValue: 'غير محدد'
   },
@@ -67,12 +79,16 @@ export const russianLettersColumns = [
     id: 'subject',
     label: 'الموضوع',
     sortable: true,
-    filterable: false, // Too many unique values
-    editable: true,
+    filterable: false,
+    editable: false,
     width: 250,
     type: 'text',
     multiline: true,
     visible: true,
+    textDirection: 'ltr',
+    textAlign: 'right',
+    headerTextAlign: 'center',
+    headerTextDirection: 'rtl',
     getValue: (row) => row.subject || 'غير محدد',
     defaultValue: 'غير محدد'
   },
@@ -98,7 +114,7 @@ export const russianLettersColumns = [
     label: 'الأولوية',
     sortable: true,
     filterable: true,
-    editable: true,
+    editable: false,
     width: 120,
     type: 'priority',
     visible: true,
@@ -119,6 +135,8 @@ export const russianLettersColumns = [
     width: 200,
     type: 'text',
     visible: true,
+    textDirection: 'rtl',
+    textAlign: 'center',
     getValue: (row) => row.current_status_name || 'غير محدد',
     defaultValue: 'غير محدد'
   },
@@ -127,7 +145,7 @@ export const russianLettersColumns = [
     label: 'مُكلف إلى',
     sortable: true,
     filterable: true,
-    editable: true,
+    editable: false,
     width: 150,
     type: 'select',
     visible: true,
@@ -139,11 +157,11 @@ export const russianLettersColumns = [
     label: 'الملخص',
     sortable: false,
     filterable: false,
-    editable: true,
+    editable: false,
     width: 200,
     type: 'text',
     multiline: true,
-    visible: false, // Hidden by default
+    visible: false,
     getValue: (row) => row.summary || 'لا يوجد ملخص',
     defaultValue: 'لا يوجد ملخص'
   },
@@ -164,10 +182,10 @@ export const russianLettersColumns = [
     label: 'سجل الحالات',
     sortable: false,
     filterable: false,
-    editable: false,
+    editable: true,
     width: 140,
     type: 'status_logs',
-    visible: false, // Hidden by default
+    visible: false,
     getValue: (row) => row.status_logs || [],
     defaultValue: []
   },
@@ -179,7 +197,7 @@ export const russianLettersColumns = [
     editable: false,
     width: 150,
     type: 'parent_correspondence',
-    visible: false, // Hidden by default
+    visible: false,
     getValue: (row) => row.parent_correspondence?.reference_number || 'لا يوجد',
     defaultValue: 'لا يوجد'
   },
@@ -191,7 +209,7 @@ export const russianLettersColumns = [
     editable: false,
     width: 140,
     type: 'datetime',
-    visible: false, // Hidden by default
+    visible: false,
     getValue: (row) => row.created_at,
     defaultValue: 'غير محدد'
   },
@@ -203,7 +221,7 @@ export const russianLettersColumns = [
     editable: false,
     width: 140,
     type: 'datetime',
-    visible: false, // Hidden by default
+    visible: false,
     getValue: (row) => row.updated_at,
     defaultValue: 'غير محدد'
   }
