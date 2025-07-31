@@ -128,11 +128,13 @@ class CorrespondenceTypeProcedureViewSet(viewsets.ModelViewSet):
 
 
 class CorrespondenceStatusLogViewSet(viewsets.ModelViewSet):
-    """ViewSet for managing correspondence status change logs"""
+    """
+    ViewSet for managing correspondence status change logs
+    """
     queryset = CorrespondenceStatusLog.objects.all()
     serializer_class = CorrespondenceStatusLogSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['correspondence', 'from_status', 'to_status', 'changed_by']
+    filterset_fields = ['correspondence', 'form_status_name', 'to_status_name', 'changed_by']
     search_fields = ['change_reason', 'correspondence__reference_number']
     ordering_fields = ['created_at']
     ordering = ['-created_at']

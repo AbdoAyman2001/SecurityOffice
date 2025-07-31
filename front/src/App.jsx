@@ -19,6 +19,7 @@ import SettingsManagement from './pages/SettingsManagement';
 import LetterForm from './pages/LetterForm';
 import RussianLetterForm from './pages/RussianLetterForm';
 import RussianLetters from './pages/RussianLetters';
+import RussianLetterDetail from './pages/RussianLetterDetail';
 import NewCorrespondence from './pages/NewCorrespondence';
 import CorrespondenceConfig from './pages/CorrespondenceConfig';
 import Login from './components/Login';
@@ -170,6 +171,7 @@ function App() {
                 <Route path="/forms/russian-letter" element={<ProtectedRoute><RussianLetterForm /></ProtectedRoute>} />
                 <Route path="/forms/new-correspondence" element={<ProtectedRoute><NewCorrespondence /></ProtectedRoute>} />
                 <Route path="/russian-letters" element={<ProtectedRoute><RussianLetters /></ProtectedRoute>} />
+                <Route path="/russian-letters/:id" element={<ProtectedRoute><RussianLetterDetail /></ProtectedRoute>} />
               </Routes>
             </Box>
           </Box>

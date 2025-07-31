@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Box, Alert, Typography, Paper } from "@mui/material";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useUniversalDataTable } from "../hooks/useUniversalDataTable";
 import { correspondenceApi } from "../services/apiService";
@@ -12,10 +13,13 @@ import {
 } from "../config/russianLettersColumns.js";
 
 const RussianLetters = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, canEditCorrespondence } = useAuth();
   const [permissionError, setPermissionError] = useState(null);
   const [showAdvancedFiltersModal, setShowAdvancedFiltersModal] =
     useState(false);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   // Column visibility state
   const [visibleColumns, setVisibleColumns] = useState({});
@@ -68,15 +72,13 @@ const RussianLetters = () => {
 
   // View and edit handlers
   const handleViewItem = (row) => {
-    // Navigate to view page or open modal
-    console.log("View item:", row);
-    // navigate(`/correspondence/${row.correspondence_id}`);
+    // Navigate to Russian Letter detail page
+    navigate(`/russian-letters/${row.correspondence_id}`);
   };
 
   const handleEditItem = (row) => {
-    // Navigate to edit page or open modal
-    console.log("Edit item:", row);
-    // navigate(`/correspondence/${row.correspondence_id}/edit`);
+    // Navigate to Russian Letter detail page in edit mode
+    navigate(`/russian-letters/${row.correspondence_id}?edit=true`);
   };
   
   // Excel export handler
@@ -107,13 +109,22 @@ const RussianLetters = () => {
     }
   };
 
-  // Check permissions on mount
+  // Check permissions on mount and handle success messages
   useEffect(() => {
     if (!isAuthenticated) {
       setPermissionError("ليس لديك الصلاحية لعرض الخطابات.");
       return;
     }
-  }, [isAuthenticated]);
+
+    // Check for success message from navigation state
+    if (location.state?.message) {
+      setSuccessMessage(location.state.message);
+      // Clear the message after showing it
+      setTimeout(() => setSuccessMessage(null), 5000);
+      // Clear the state to prevent showing message on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [isAuthenticated, location.state]);
 
   // Show permission error
   if (!isAuthenticated) {
@@ -162,6 +173,13 @@ const RussianLetters = () => {
         onApply={handleApplyAdvancedFilters}
         onClear={handleClearAdvancedFilters}
       />
+
+      {/* Success Alert */}
+      {successMessage && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {successMessage}
+        </Alert>
+      )}
 
       {/* Error Alert */}
       {error && (

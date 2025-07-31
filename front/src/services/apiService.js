@@ -127,12 +127,53 @@ export const correspondenceApi = {
   addContact: (correspondenceId, contactData) => {
     return apiService.post(`/correspondence/${correspondenceId}/add_contact/`, contactData);
   },
+  getStatusHistory: (id) => apiService.get(`/correspondence-status-logs/?correspondence=${id}`),
+  getRelatedCorrespondence: async (id) => {
+    // Get related correspondence by finding letters with same parent or children
+    try {
+      const response = await apiService.get(`/correspondence/?parent_correspondence=${id}`);
+      return response.data;
+    } catch (error) {
+      console.warn('No related correspondence found:', error);
+      return [];
+    }
+  },
+  getCorrespondenceTypes: (params = {}) => apiService.get('/correspondence-types/', { params }),
+  getContacts: (params = {}) => apiService.get('/contacts/', { params }),
+  getUsers: (params = {}) => {
+    // Since there's no /users/ endpoint, we'll return empty array for now
+    // This should be implemented in the backend if user assignment is needed
+    console.warn('Users endpoint not available in backend');
+    return Promise.resolve({ data: [] });
+  },
+  getTypeProcedures: (typeId) => apiService.get(`/correspondence-type-procedures/?correspondence_type=${typeId}`),
+  downloadAttachment: async (attachmentId, fileName) => {
+    try {
+      const response = await apiService.get(`/attachments/${attachmentId}/download/`, {
+        responseType: 'blob',
+      });
+      
+      // Create blob link to download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      return { success: true, fileName };
+    } catch (error) {
+      console.error('Download failed:', error);
+      throw error;
+    }
+  },
   exportExcel: async (params = {}) => {
     try {
       const response = await apiService.get('/correspondence/export_excel/', {
         params,
         responseType: 'blob',
-        timeout: 60000, // 60 seconds timeout for large exports
       });
       
       // Create blob link to download
