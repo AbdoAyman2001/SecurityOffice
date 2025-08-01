@@ -7,6 +7,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemIcon,
   Chip,
   Avatar,
   Divider,
@@ -14,17 +15,10 @@ import {
   Alert
 } from '@mui/material';
 import {
-  Timeline,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineConnector,
-  TimelineContent,
-  TimelineDot
-} from '@mui/lab';
-import {
   Person as PersonIcon,
   CheckCircle as CheckCircleIcon,
-  RadioButtonUnchecked as RadioButtonUncheckedIcon
+  RadioButtonUnchecked as RadioButtonUncheckedIcon,
+  History as HistoryIcon
 } from '@mui/icons-material';
 import { correspondenceApi } from '../../services/apiService';
 
@@ -95,7 +89,7 @@ const StatusHistory = ({ letterId }) => {
     <Card>
       <CardContent>
         <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <CheckCircleIcon color="primary" />
+          <HistoryIcon color="primary" />
           تاريخ الحالات
         </Typography>
         
@@ -104,58 +98,67 @@ const StatusHistory = ({ letterId }) => {
             لا يوجد تاريخ للحالات
           </Typography>
         ) : (
-          <Timeline sx={{ p: 0 }}>
+          <List sx={{ p: 0 }}>
             {statusHistory.map((status, index) => (
-              <TimelineItem key={status.id || index}>
-                <TimelineSeparator>
-                  <TimelineDot 
-                    color={index === 0 ? "primary" : "grey"}
-                    variant={index === 0 ? "filled" : "outlined"}
-                  >
-                    {index === 0 ? <CheckCircleIcon /> : <RadioButtonUncheckedIcon />}
-                  </TimelineDot>
-                  {index < statusHistory.length - 1 && <TimelineConnector />}
-                </TimelineSeparator>
-                
-                <TimelineContent sx={{ py: '12px', px: 2 }}>
-                  <Box sx={{ mb: 1 }}>
-                    <Typography variant="subtitle2" component="div">
-                      {status.form_status_name && status.to_status_name ? (
-                        <>
-                          <span style={{ color: '#d32f2f' }}>{status.form_status_name}</span>
-                          {' ← '}
-                          <span style={{ color: '#2e7d32' }}>{status.to_status_name}</span>
-                        </>
-                      ) : (
-                        status.to_status_name || 'تغيير الحالة'
-                      )}
-                    </Typography>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Avatar sx={{ width: 24, height: 24, fontSize: '0.75rem' }}>
-                      <PersonIcon fontSize="small" />
-                    </Avatar>
-                    <Typography variant="body2" color="text.secondary">
-                      {status.changed_by?.username || status.changed_by?.full_name_arabic || 'النظام'}
-                    </Typography>
-                  </Box>
-                  
-                  <Typography variant="caption" color="text.secondary">
-                    {formatDate(status.created_at)}
-                  </Typography>
-                  
-                  {status.change_reason && (
-                    <Box sx={{ mt: 1 }}>
-                      <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                        "{status.change_reason}"
-                      </Typography>
-                    </Box>
+              <ListItem 
+                key={status.id || index}
+                sx={{ 
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  mb: 1,
+                  backgroundColor: index === 0 ? 'action.hover' : 'transparent'
+                }}
+              >
+                <ListItemIcon>
+                  {index === 0 ? (
+                    <CheckCircleIcon color="primary" />
+                  ) : (
+                    <RadioButtonUncheckedIcon color="action" />
                   )}
-                </TimelineContent>
-              </TimelineItem>
+                </ListItemIcon>
+                
+                <ListItemText
+                  primary={
+                    <Box>
+                      <Typography variant="subtitle2" component="div" sx={{ mb: 1 }}>
+                        {status.form_status_name && status.to_status_name ? (
+                          <>
+                            <span style={{ color: '#d32f2f' }}>{status.form_status_name}</span>
+                            {' ← '}
+                            <span style={{ color: '#2e7d32' }}>{status.to_status_name}</span>
+                          </>
+                        ) : (
+                          status.to_status_name || 'تغيير الحالة'
+                        )}
+                      </Typography>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                        <Avatar sx={{ width: 20, height: 20, fontSize: '0.7rem' }}>
+                          <PersonIcon fontSize="small" />
+                        </Avatar>
+                        <Typography variant="body2" color="text.secondary">
+                          {status.changed_by?.username || status.changed_by?.full_name_arabic || 'النظام'}
+                        </Typography>
+                      </Box>
+                      
+                      <Typography variant="caption" color="text.secondary">
+                        {formatDate(status.created_at)}
+                      </Typography>
+                      
+                      {status.change_reason && (
+                        <Box sx={{ mt: 1 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                            "{status.change_reason}"
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  }
+                />
+              </ListItem>
             ))}
-          </Timeline>
+          </List>
         )}
       </CardContent>
     </Card>

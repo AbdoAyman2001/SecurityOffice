@@ -177,7 +177,7 @@ const TableFilters = ({
                 >
                   <MenuItem value="">الكل</MenuItem>
                   {correspondenceTypes.map((type) => (
-                    <MenuItem key={type.type_id} value={type.type_id}>
+                    <MenuItem key={type.correspondence_type_id} value={type.correspondence_type_id}>
                       {type.type_name}
                     </MenuItem>
                   ))}

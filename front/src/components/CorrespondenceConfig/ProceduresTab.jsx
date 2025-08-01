@@ -48,7 +48,7 @@ const ProceduresTab = ({
   );
 
   const selectedType = correspondenceTypes.find(
-    (type) => (type.correspondence_type_id || type.id) === selectedTypeId
+    (type) => type.correspondence_type_id === selectedTypeId
   );
 
   return (

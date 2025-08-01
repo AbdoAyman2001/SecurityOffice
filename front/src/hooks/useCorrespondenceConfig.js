@@ -92,7 +92,7 @@ export const useCorrespondenceConfig = () => {
       setLoading(true);
       if (editingType) {
         await correspondenceTypesApi.update(
-          editingType.correspondence_type_id || editingType.type_id,
+          editingType.correspondence_type_id,
           typeForm
         );
         showSuccess('تم تحديث نوع الخطاب بنجاح');

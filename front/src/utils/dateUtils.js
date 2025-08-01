@@ -12,7 +12,8 @@ export const formatDate = (date) => {
     const dateObj = new Date(date);
     if (isNaN(dateObj.getTime())) return 'تاريخ غير صحيح';
     
-    return dateObj.toLocaleDateString('ar-SA', {
+    // Use Georgian calendar format (en-US) for dates
+    return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
@@ -35,7 +36,8 @@ export const formatDateTime = (date) => {
     const dateObj = new Date(date);
     if (isNaN(dateObj.getTime())) return 'تاريخ غير صحيح';
     
-    return dateObj.toLocaleDateString('ar-SA', {
+    // Use Georgian calendar format (en-US) for dates
+    return dateObj.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -49,7 +51,7 @@ export const formatDateTime = (date) => {
 };
 
 /**
- * Format date for input fields (YYYY-MM-DD)
+ * Format date for HTML date input (YYYY-MM-DD)
  * @param {string|Date} date - Date to format
  * @returns {string} Formatted date string for input
  */
@@ -60,12 +62,38 @@ export const formatDateForInput = (date) => {
     const dateObj = new Date(date);
     if (isNaN(dateObj.getTime())) return '';
     
+    // Format as YYYY-MM-DD for HTML date input
     return dateObj.toISOString().split('T')[0];
   } catch (error) {
     console.error('Error formatting date for input:', error);
     return '';
   }
 };
+
+/**
+ * Format date in short format (MM/DD/YYYY)
+ * @param {string|Date} date - Date to format
+ * @returns {string} Formatted date string
+ */
+export const formatDateShort = (date) => {
+  if (!date) return 'غير محدد';
+  
+  try {
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) return 'تاريخ غير صحيح';
+    
+    return dateObj.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  } catch (error) {
+    console.error('Error formatting date short:', error);
+    return 'تاريخ غير صحيح';
+  }
+};
+
+
 
 /**
  * Get relative time (e.g., "منذ ساعتين")

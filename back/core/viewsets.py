@@ -382,6 +382,88 @@ class CorrespondenceViewSet(viewsets.ModelViewSet):
         except Exception as e:
             # Fallback in case of any error
             return 'خطأ في تحميل المرفقات'
+    
+    @action(detail=True, methods=['get'], url_path='detail-with-relations')
+    def detail_with_relations(self, request, pk=None):
+        """Get comprehensive letter detail with all related data in one call"""
+        try:
+            # Get the main correspondence with all related data
+            correspondence = self.get_object()
+            
+            # Serialize the main correspondence
+            serializer = self.get_serializer(correspondence)
+            letter_data = serializer.data
+            
+            # Get status history
+            status_logs = CorrespondenceStatusLog.objects.filter(
+                correspondence=correspondence
+            ).order_by('-created_at')
+            from .serializers import CorrespondenceStatusLogSerializer
+            status_history = CorrespondenceStatusLogSerializer(status_logs, many=True).data
+            
+            # Get related correspondence (children, siblings, parent)
+            children = Correspondence.objects.filter(
+                parent_correspondence=correspondence
+            ).select_related('type', 'contact', 'current_status')
+            
+            siblings = []
+            if correspondence.parent_correspondence:
+                siblings = Correspondence.objects.filter(
+                    parent_correspondence=correspondence.parent_correspondence
+                ).exclude(
+                    correspondence_id=correspondence.correspondence_id
+                ).select_related('type', 'contact', 'current_status')
+            
+            parent = []
+            if correspondence.parent_correspondence:
+                parent = [correspondence.parent_correspondence]
+            
+            # Combine all related correspondence
+            all_related = list(children) + list(siblings) + parent
+            related_correspondence = CorrespondenceSerializer(all_related, many=True).data if all_related else []
+            
+            # Get correspondence types
+            correspondence_types = CorrespondenceTypes.objects.all()
+            types_data = CorrespondenceTypesSerializer(correspondence_types, many=True).data
+            
+            # Get contacts
+            contacts = Contacts.objects.all()
+            from .serializers import ContactsSerializer
+            contacts_data = ContactsSerializer(contacts, many=True).data
+            
+            # Get procedures for this correspondence type
+            procedures_data = []
+            if correspondence.type:
+                from .models import CorrespondenceTypeProcedure
+                from .serializers import CorrespondenceTypeProcedureSerializer
+                procedures = CorrespondenceTypeProcedure.objects.filter(
+                    correspondence_type=correspondence.type
+                ).order_by('procedure_order')
+                procedures_data = CorrespondenceTypeProcedureSerializer(procedures, many=True).data
+            
+            # Prepare response data
+            response_data = {
+                'letter': letter_data,
+                'status_history': status_history,
+                'related_correspondence': related_correspondence,
+                'correspondence_types': types_data,
+                'contacts': contacts_data,
+                'procedures': procedures_data,
+                'metadata': {
+                    'has_parent': correspondence.parent_correspondence is not None,
+                    'children_count': len(list(children)),
+                    'siblings_count': len(list(siblings)),
+                    'total_related': len(related_correspondence)
+                }
+            }
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Failed to fetch letter details: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 
 class AttachmentsViewSet(viewsets.ModelViewSet):

@@ -26,7 +26,15 @@ import {
 import { correspondenceApi } from '../../services/apiService';
 import { useAuth } from '../../contexts/AuthContext';
 
-const RussianLetterEditModal = ({ open, onClose, letter, onSuccess }) => {
+const RussianLetterEditModal = ({ 
+  open, 
+  onClose, 
+  letter, 
+  onSuccess, 
+  correspondenceTypes = [], 
+  contacts = [], 
+  procedures = [] 
+}) => {
   const { canEditCorrespondence } = useAuth();
   
   // Form state
@@ -38,7 +46,7 @@ const RussianLetterEditModal = ({ open, onClose, letter, onSuccess }) => {
     priority: 'normal',
     direction: 'Incoming',
     contact_id: '',
-    type_id: '',
+    correspondence_type_id: '',
     current_status_id: '',
     assigned_to_id: ''
   });
@@ -49,10 +57,7 @@ const RussianLetterEditModal = ({ open, onClose, letter, onSuccess }) => {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  // Options data
-  const [correspondenceTypes, setCorrespondenceTypes] = useState([]);
-  const [contacts, setContacts] = useState([]);
-  const [procedures, setProcedures] = useState([]);
+  // Options data (correspondenceTypes, contacts, procedures now come from props)
   const [users, setUsers] = useState([]);
 
   // Initialize form data when letter changes
@@ -66,7 +71,7 @@ const RussianLetterEditModal = ({ open, onClose, letter, onSuccess }) => {
         priority: letter.priority || 'normal',
         direction: letter.direction || 'Incoming',
         contact_id: letter.contact?.contact_id || '',
-        type_id: letter.type?.correspondence_type_id || '',
+        correspondence_type_id: letter.type?.correspondence_type_id || '',
         current_status_id: letter.current_status?.id || '',
         assigned_to_id: letter.assigned_to?.id || ''
       });
@@ -74,28 +79,15 @@ const RussianLetterEditModal = ({ open, onClose, letter, onSuccess }) => {
     }
   }, [letter, open]);
 
-  // Load form options
+  // Load form options (only users since other data comes from props)
   const loadFormOptions = async () => {
     try {
       setLoading(true);
-      const [typesResponse, contactsResponse, usersResponse] = await Promise.all([
-        correspondenceApi.getCorrespondenceTypes({ category: 'Russian' }),
-        correspondenceApi.getContacts(),
-        correspondenceApi.getUsers()
-      ]);
-
-      setCorrespondenceTypes(typesResponse.data || []);
-      setContacts(contactsResponse.data || []);
+      const usersResponse = await correspondenceApi.getUsers();
       setUsers(usersResponse.data || []);
-
-      // Load procedures for current type
-      if (formData.type_id) {
-        const proceduresResponse = await correspondenceApi.getTypeProcedures(formData.type_id);
-        setProcedures(proceduresResponse.data || []);
-      }
     } catch (err) {
-      console.error('Error loading form options:', err);
-      setError('حدث خطأ أثناء تحميل بيانات النموذج.');
+      console.error('Error loading users:', err);
+      setError('حدث خطأ أثناء تحميل بيانات المستخدمين.');
     } finally {
       setLoading(false);
     }
@@ -103,32 +95,26 @@ const RussianLetterEditModal = ({ open, onClose, letter, onSuccess }) => {
 
   // Handle input changes
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-
-    // Load procedures when type changes
-    if (field === 'type_id' && value) {
-      loadProceduresForType(value);
+    // Handle type changes specially to reset status
+    if (field === 'correspondence_type_id') {
+      handleTypeChange(value);
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value
+      }));
     }
   };
 
   // Load procedures for selected type
-  const loadProceduresForType = async (typeId) => {
-    try {
-      const proceduresResponse = await correspondenceApi.getTypeProcedures(typeId);
-      const proceduresData = proceduresResponse.data || [];
-      setProcedures(proceduresData);
-      
-      // Reset current status if it doesn't belong to new type
-      const currentStatusExists = proceduresData.some(p => p.id === formData.current_status_id);
-      if (!currentStatusExists) {
-        setFormData(prev => ({ ...prev, current_status_id: '' }));
-      }
-    } catch (err) {
-      console.error('Error loading procedures:', err);
-    }
+  // Procedures are now passed as props, so we just need to reset status when type changes
+  const handleTypeChange = (typeId) => {
+    // Reset current status when type changes since procedures might be different
+    setFormData(prev => ({ 
+      ...prev, 
+      correspondence_type_id: typeId,
+      current_status_id: '' 
+    }));
   };
 
   // Handle form submission
@@ -148,7 +134,7 @@ const RussianLetterEditModal = ({ open, onClose, letter, onSuccess }) => {
       const submitData = {
         ...formData,
         contact_id: formData.contact_id || null,
-        type_id: formData.type_id || null,
+        type: formData.correspondence_type_id || null,
         current_status_id: formData.current_status_id || null,
         assigned_to_id: formData.assigned_to_id || null
       };
@@ -344,24 +330,24 @@ const RussianLetterEditModal = ({ open, onClose, letter, onSuccess }) => {
                 <FormControl fullWidth>
                   <InputLabel>نوع الخطاب</InputLabel>
                   <Select
-                    value={formData.type_id}
-                    onChange={(e) => handleInputChange('type_id', e.target.value)}
+                    value={formData.correspondence_type_id}
+                    onChange={(e) => handleInputChange('correspondence_type_id', e.target.value)}
                     label="نوع الخطاب"
                   >
                     <MenuItem value="">
                       <em>اختر نوع الخطاب</em>
                     </MenuItem>
-                    {correspondenceTypes.map(type => (
+                    {Array.isArray(correspondenceTypes) ? correspondenceTypes.map(type => (
                       <MenuItem key={type.correspondence_type_id} value={type.correspondence_type_id}>
                         {type.type_name}
                       </MenuItem>
-                    ))}
+                    )) : []}
                   </Select>
                 </FormControl>
               </Grid>
 
               <Grid item xs={12} sm={6}>
-                <FormControl fullWidth disabled={!formData.type_id}>
+                <FormControl fullWidth disabled={!formData.correspondence_type_id}>
                   <InputLabel>الحالة الحالية</InputLabel>
                   <Select
                     value={formData.current_status_id}
@@ -371,11 +357,11 @@ const RussianLetterEditModal = ({ open, onClose, letter, onSuccess }) => {
                     <MenuItem value="">
                       <em>اختر الحالة</em>
                     </MenuItem>
-                    {procedures.map(procedure => (
+                    {Array.isArray(procedures) ? procedures.map(procedure => (
                       <MenuItem key={procedure.id} value={procedure.id}>
                         {procedure.procedure_name}
                       </MenuItem>
-                    ))}
+                    )) : []}
                   </Select>
                 </FormControl>
               </Grid>
@@ -390,9 +376,9 @@ const RussianLetterEditModal = ({ open, onClose, letter, onSuccess }) => {
 
               <Grid item xs={12} sm={6}>
                 <Autocomplete
-                  options={contacts}
+                  options={Array.isArray(contacts) ? contacts : []}
                   getOptionLabel={(option) => `${option.name} (${option.contact_type === 'Person' ? 'شخص' : 'منظمة'})`}
-                  value={contacts.find(c => c.contact_id === formData.contact_id) || null}
+                  value={Array.isArray(contacts) ? contacts.find(c => c.contact_id === formData.contact_id) || null : null}
                   onChange={(event, newValue) => {
                     handleInputChange('contact_id', newValue?.contact_id || '');
                   }}

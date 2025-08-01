@@ -61,14 +61,14 @@ const CorrespondenceTypesTab = ({
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {correspondenceTypes.map((type) => (
             <Card
-              key={type.correspondence_type_id || type.id}
+              key={type.correspondence_type_id}
               sx={{
                 cursor: 'pointer',
                 border: 1,
-                borderColor: selectedTypeId === (type.correspondence_type_id || type.id) 
+                borderColor: selectedTypeId === type.correspondence_type_id 
                   ? 'primary.main' 
                   : 'divider',
-                backgroundColor: selectedTypeId === (type.correspondence_type_id || type.id) 
+                backgroundColor: selectedTypeId === type.correspondence_type_id 
                   ? 'primary.light' 
                   : 'transparent',
                 '&:hover': {
@@ -77,7 +77,7 @@ const CorrespondenceTypesTab = ({
                 },
                 width: '100%',
               }}
-              onClick={() => onSelectType(type.correspondence_type_id || type.id)}
+              onClick={() => onSelectType(type.correspondence_type_id)}
             >
               <CardContent sx={{p:'16px !important' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', p: 0, justifyContent: 'space-between' }}>
@@ -101,7 +101,7 @@ const CorrespondenceTypesTab = ({
                   </Box>
                   
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    {selectedTypeId === (type.correspondence_type_id || type.id) && (
+                    {selectedTypeId === type.correspondence_type_id && (
                       <Chip
                         label="محدد"
                         color="primary"
@@ -128,7 +128,7 @@ const CorrespondenceTypesTab = ({
                       color="error"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onDeleteType(type.correspondence_type_id || type.id);
+                        onDeleteType(type.correspondence_type_id);
                       }}
                       disabled={loading}
                       sx={{ p: 0.5 }}

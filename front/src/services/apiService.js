@@ -121,8 +121,13 @@ export const peopleApi = {
 export const correspondenceApi = {
   getAll: (params = {}) => apiService.get('/correspondence/', { params }),
   getById: (id) => apiService.get(`/correspondence/${id}/`),
+  getDetailWithRelations: (id) => apiService.get(`/correspondence/${id}/detail-with-relations/`),
   create: (data) => apiService.post('/correspondence/', data),
   update: (id, data) => apiService.put(`/correspondence/${id}/`, data),
+  updateField: (id, fieldName, value) => {
+    const updateData = { [fieldName]: value };
+    return apiService.patch(`/correspondence/${id}/`, updateData);
+  },
   delete: (id) => apiService.delete(`/correspondence/${id}/`),
   addContact: (correspondenceId, contactData) => {
     return apiService.post(`/correspondence/${correspondenceId}/add_contact/`, contactData);
@@ -141,10 +146,12 @@ export const correspondenceApi = {
   getCorrespondenceTypes: (params = {}) => apiService.get('/correspondence-types/', { params }),
   getContacts: (params = {}) => apiService.get('/contacts/', { params }),
   getUsers: (params = {}) => {
-    // Since there's no /users/ endpoint, we'll return empty array for now
-    // This should be implemented in the backend if user assignment is needed
-    console.warn('Users endpoint not available in backend');
-    return Promise.resolve({ data: [] });
+    // Try to get users from Django auth system
+    return apiService.get('/auth/users/', { params }).catch(() => {
+      // Fallback: try alternative endpoint or return empty
+      console.warn('Users endpoint not available, using fallback');
+      return { data: [] };
+    });
   },
   getTypeProcedures: (typeId) => apiService.get(`/correspondence-type-procedures/?correspondence_type=${typeId}`),
   downloadAttachment: async (attachmentId, fileName) => {

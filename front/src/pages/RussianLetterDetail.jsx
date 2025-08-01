@@ -9,6 +9,8 @@ import {
   Divider,
   Grid,
   Fab,
+  Card,
+  CardContent,
 } from "@mui/material";
 import {
   ArrowBack as ArrowBackIcon,
@@ -18,13 +20,11 @@ import { useAuth } from "../contexts/AuthContext";
 import { correspondenceApi } from "../services/apiService";
 
 // Import refactored components
-import LetterBreadcrumbs from '../components/RussianLetterDetail/LetterBreadcrumbs';
-import LetterHeader from '../components/RussianLetterDetail/LetterHeader';
-import BasicInformation from '../components/RussianLetterDetail/BasicInformation';
-import StatusHistory from '../components/RussianLetterDetail/StatusHistory';
-import QuickActions from '../components/RussianLetterDetail/QuickActions';
-import DeleteConfirmDialog from '../components/RussianLetterDetail/DeleteConfirmDialog';
-import LoadingState from '../components/RussianLetterDetail/LoadingState';
+import LetterBreadcrumbs from "../components/RussianLetterDetail/LetterBreadcrumbs";
+import LetterHeader from "../components/RussianLetterDetail/LetterHeader";
+import BasicInformation from "../components/RussianLetterDetail/BasicInformation";
+import DeleteConfirmDialog from "../components/RussianLetterDetail/DeleteConfirmDialog";
+import LoadingState from "../components/RussianLetterDetail/LoadingState";
 import RussianLetterEditModal from "../components/RussianLetterDetail/RussianLetterEditModal";
 import StatusHistoryModal from "../components/RussianLetterDetail/StatusHistoryModal";
 import AttachmentsList from "../components/RussianLetterDetail/AttachmentsList";
@@ -33,7 +33,8 @@ import RelatedCorrespondenceList from "../components/RussianLetterDetail/Related
 const RussianLetterDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated, canEditCorrespondence, canDeleteCorrespondence } = useAuth();
+  const { isAuthenticated, canEditCorrespondence, canDeleteCorrespondence } =
+    useAuth();
 
   // State management
   const [letter, setLetter] = useState(null);
@@ -45,6 +46,10 @@ const RussianLetterDetail = () => {
   const [deleting, setDeleting] = useState(false);
   const [statusHistory, setStatusHistory] = useState([]);
   const [relatedCorrespondence, setRelatedCorrespondence] = useState([]);
+  const [correspondenceTypes, setCorrespondenceTypes] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [procedures, setProcedures] = useState([]);
+  const [users, setUsers] = useState([]);
 
   // Load letter data
   useEffect(() => {
@@ -61,18 +66,94 @@ const RussianLetterDetail = () => {
       setLoading(true);
       setError(null);
 
-      // Load main letter data
-      const letterResponse = await correspondenceApi.getById(id);
-      setLetter(letterResponse.data);
+      // Try the new comprehensive API endpoint first
+      try {
+        const response = await correspondenceApi.getDetailWithRelations(id);
+        const data = response.data;
 
-      // Load related data in parallel
-      const [statusHistoryResponse, relatedData] = await Promise.all([
-        correspondenceApi.getStatusHistory(id),
-        correspondenceApi.getRelatedCorrespondence(id),
-      ]);
+        console.log("Comprehensive letter data:", data);
 
-      setStatusHistory(statusHistoryResponse.data || []);
-      setRelatedCorrespondence(relatedData || []);
+        // Set all data from the comprehensive response
+        setLetter(data.letter);
+        setStatusHistory(data.status_history || []);
+        setRelatedCorrespondence(data.related_correspondence || []);
+        
+        // Filter correspondence types to only show Russian category
+        const allTypes = data.correspondence_types || [];
+        const russianTypes = allTypes.filter(type => type.category === 'Russian');
+        setCorrespondenceTypes(russianTypes);
+        
+        setContacts(data.contacts || []);
+        setProcedures(data.procedures || []);
+        
+        // Load users separately since it's not in the comprehensive endpoint
+        try {
+          const usersResponse = await correspondenceApi.getUsers();
+          setUsers(usersResponse.data || []);
+        } catch (userError) {
+          console.warn('Failed to load users:', userError);
+          setUsers([]);
+        }
+
+        return; // Success, exit early
+      } catch (comprehensiveError) {
+        console.warn(
+          "Comprehensive endpoint failed, falling back to individual calls:",
+          comprehensiveError
+        );
+
+        // Fallback to original multiple API calls
+        const letterResponse = await correspondenceApi.getById(id);
+        setLetter(letterResponse.data);
+
+        // Load related data in parallel
+        const [
+          statusHistoryResponse,
+          relatedData,
+          typesResponse,
+          contactsResponse,
+        ] = await Promise.all([
+          correspondenceApi.getStatusHistory(id),
+          correspondenceApi.getRelatedCorrespondence(id),
+          correspondenceApi.getCorrespondenceTypes(),
+          correspondenceApi.getContacts(),
+        ]);
+
+        setStatusHistory(statusHistoryResponse.data || []);
+        setRelatedCorrespondence(relatedData || []);
+        
+        // Filter correspondence types to only show Russian category
+        const allTypes = typesResponse.data || [];
+        const russianTypes = allTypes.filter(type => type.category === 'Russian');
+        setCorrespondenceTypes(russianTypes);
+        
+        setContacts(contactsResponse.data || []);
+        
+        // Load users and procedures
+        try {
+          const usersResponse = await correspondenceApi.getUsers();
+          setUsers(usersResponse.data || []);
+        } catch (userError) {
+          console.warn('Failed to load users:', userError);
+          setUsers([]);
+        }
+        
+        // Load procedures for current type if available
+        if (letterResponse.data?.type?.correspondence_type_id) {
+          try {
+            const proceduresResponse =
+              await correspondenceApi.getTypeProcedures(
+                letterResponse.data.type.correspondence_type_id
+              );
+            setProcedures(proceduresResponse.data || []);
+          } catch (procError) {
+            console.warn("Failed to load procedures:", procError);
+            setProcedures([]);
+          }
+        } else {
+          setProcedures([]);
+        }
+      }
     } catch (err) {
       console.error("Error loading letter data:", err);
       setError("حدث خطأ أثناء تحميل بيانات الخطاب. يرجى المحاولة مرة أخرى.");
@@ -120,10 +201,35 @@ const RussianLetterDetail = () => {
 
   const handleFieldUpdate = async (fieldName, value) => {
     try {
-      const updatedData = { [fieldName]: value };
-      const response = await correspondenceApi.update(id, updatedData);
-      setLetter(response.data);
-      // Optionally show success message
+      // Use the new updateField method for better performance
+      const response = await correspondenceApi.updateField(id, fieldName, value);
+      
+      // Update the letter state with the new data
+      setLetter(prevLetter => ({
+        ...prevLetter,
+        [fieldName]: value,
+        // Handle nested object updates
+        ...(fieldName === 'type' && {
+          type: correspondenceTypes.find(t => t.correspondence_type_id === value)
+        }),
+        ...(fieldName === 'contact' && {
+          contact: contacts.find(c => c.contact_id === value)
+        }),
+        ...(fieldName === 'assigned_to' && {
+          assigned_to: users.find(u => u.id === value)
+        })
+      }));
+      
+      // If type changed, reload procedures
+      if (fieldName === 'type') {
+        try {
+          const proceduresResponse = await correspondenceApi.getTypeProcedures(value);
+          setProcedures(proceduresResponse.data || []);
+        } catch (procError) {
+          console.warn('Failed to reload procedures:', procError);
+        }
+      }
+      
     } catch (err) {
       console.error("Error updating field:", err);
       setError("حدث خطأ أثناء تحديث البيانات.");
@@ -136,7 +242,7 @@ const RussianLetterDetail = () => {
     // This would typically call an API endpoint that opens the file explorer
     // For now, we'll use a simple approach - you can enhance this based on your backend
     const folderPath = `attachments/${letterId}`;
-    
+
     // For Windows, you might use something like:
     if (window.electron) {
       // If using Electron
@@ -154,10 +260,14 @@ const RussianLetterDetail = () => {
   // Utility functions
   const getPriorityColor = (priority) => {
     switch (priority?.toLowerCase()) {
-      case "high": return "error";
-      case "normal": return "primary";
-      case "low": return "success";
-      default: return "default";
+      case "high":
+        return "error";
+      case "normal":
+        return "primary";
+      case "low":
+        return "success";
+      default:
+        return "default";
     }
   };
 
@@ -205,8 +315,14 @@ const RussianLetterDetail = () => {
 
       <Grid container spacing={3}>
         {/* Main Information */}
-        <Grid item xs={12} md={8}>
-          <BasicInformation letter={letter} onUpdate={handleFieldUpdate} />
+        <Grid item xs={12} md={8} sx={{ width: "100%" }}>
+          <BasicInformation
+            letter={letter}
+            onUpdate={handleFieldUpdate}
+            correspondenceTypes={correspondenceTypes}
+            contacts={contacts}
+            users={users}
+          />
 
           {/* Attachments */}
           <Card sx={{ mt: 3 }}>
@@ -221,32 +337,19 @@ const RussianLetterDetail = () => {
           </Card>
 
           {/* Related Correspondence */}
-          {letter.related_correspondence && letter.related_correspondence.length > 0 && (
-            <Card sx={{ mt: 3 }}>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  المراسلات ذات الصلة
-                </Typography>
-                <RelatedCorrespondenceList
-                  relatedCorrespondence={letter.related_correspondence}
-                />
-              </CardContent>
-            </Card>
-          )}
-        </Grid>
-
-        {/* Sidebar */}
-        <Grid item xs={12} md={4}>
-          <StatusHistory letterId={letter.correspondence_id} />
-          <Box sx={{ mt: 3 }}>
-            <QuickActions
-              letter={letter}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onPrint={handlePrint}
-              onShare={handleShare}
-            />
-          </Box>
+          {letter.related_correspondence &&
+            letter.related_correspondence.length > 0 && (
+              <Card sx={{ mt: 3 }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    المراسلات ذات الصلة
+                  </Typography>
+                  <RelatedCorrespondenceList
+                    relatedCorrespondence={letter.related_correspondence}
+                  />
+                </CardContent>
+              </Card>
+            )}
         </Grid>
       </Grid>
 
@@ -274,6 +377,9 @@ const RussianLetterDetail = () => {
         onClose={() => setEditModalOpen(false)}
         letter={letter}
         onSuccess={handleEditSuccess}
+        correspondenceTypes={correspondenceTypes}
+        contacts={contacts}
+        procedures={procedures}
       />
 
       {/* Status History Modal */}

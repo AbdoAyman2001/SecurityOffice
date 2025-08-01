@@ -79,7 +79,7 @@ const BasicFormFields = ({
               // console.log('Rendering type option:', type);
               return (
                 <MenuItem
-                  key={type.type_id}
+                  key={type.correspondence_type_id}
                   value={type.correspondence_type_id}
                 >
                   {type.type_name}

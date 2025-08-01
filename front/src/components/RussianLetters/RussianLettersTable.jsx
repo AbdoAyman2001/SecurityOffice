@@ -101,7 +101,7 @@ const RussianLettersTable = ({
   ];
 
   const typeOptions = correspondenceTypes.map(type => ({
-    value: type.type_id,
+    value: type.correspondence_type_id,
     label: type.type_name
   }));
 
@@ -266,7 +266,7 @@ const RussianLettersTable = ({
                   {/* Type */}
                   <TableCell>
                     <InlineEditCell
-                      value={letter.type?.type_id}
+                      value={letter.type?.correspondence_type_id}
                       displayValue={getDisplayValue(letter, 'type')}
                       type="select"
                       options={typeOptions}
