@@ -7,7 +7,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from django.db import transaction
-from .serializers import (
+from .serializers.auth_serializers import (
     LoginSerializer, LoginResponseSerializer, ChangePasswordSerializer,
     UserSerializer, UserCreateSerializer, UserUpdateSerializer, 
     UserPermissionsSerializer

@@ -18,15 +18,28 @@ from .models import (
     Accidents, Relocation, RelocationPeriod, Vehicle, CarPermit,
     CardPermits, CardPhotos
 )
-from .serializers import (
-    UserSerializer, PeopleHistorySerializer, CompaniesHistorySerializer,
+from .serializers.auth_serializers import UserSerializer
+from .serializers.people_serializers import (
+    PeopleHistorySerializer, CompaniesHistorySerializer,
     EmploymentHistorySerializer, FamilyRelationshipsSerializer,
+    PeopleHistorySummarySerializer
+)
+from .serializers.correspondence_serializers import (
     CorrespondenceTypesSerializer, ContactsSerializer, CorrespondenceSerializer,
-    AttachmentsSerializer,
-    PermitsSerializer, ApprovalDecisionsSerializer,
-    AccidentsSerializer, RelocationSerializer, RelocationPeriodSerializer,
-    VehicleSerializer, CarPermitSerializer, CardPermitsSerializer, CardPhotosSerializer,
-    PeopleHistorySummarySerializer, CorrespondenceSummarySerializer
+    AttachmentsSerializer, CorrespondenceSummarySerializer
+)
+from .serializers.permits_serializers import (
+    PermitsSerializer, ApprovalDecisionsSerializer
+)
+from .serializers.accidents_serializers import AccidentsSerializer
+from .serializers.relocation_serializers import (
+    RelocationSerializer, RelocationPeriodSerializer
+)
+from .serializers.vehicles_serializers import (
+    VehicleSerializer, CarPermitSerializer
+)
+from .serializers.cards_serializers import (
+    CardPermitsSerializer, CardPhotosSerializer
 )
 
 User = get_user_model()
@@ -398,7 +411,7 @@ class CorrespondenceViewSet(viewsets.ModelViewSet):
             status_logs = CorrespondenceStatusLog.objects.filter(
                 correspondence=correspondence
             ).order_by('-created_at')
-            from .serializers import CorrespondenceStatusLogSerializer
+            from .serializers.correspondence_serializers import CorrespondenceStatusLogSerializer
             status_history = CorrespondenceStatusLogSerializer(status_logs, many=True).data
             
             # Get related correspondence (children, siblings, parent)
@@ -428,14 +441,14 @@ class CorrespondenceViewSet(viewsets.ModelViewSet):
             
             # Get contacts
             contacts = Contacts.objects.all()
-            from .serializers import ContactsSerializer
+            from .serializers.correspondence_serializers import ContactsSerializer
             contacts_data = ContactsSerializer(contacts, many=True).data
             
             # Get procedures for this correspondence type
             procedures_data = []
             if correspondence.type:
                 from .models import CorrespondenceTypeProcedure
-                from .serializers import CorrespondenceTypeProcedureSerializer
+                from .serializers.correspondence_serializers import CorrespondenceTypeProcedureSerializer
                 procedures = CorrespondenceTypeProcedure.objects.filter(
                     correspondence_type=correspondence.type
                 ).order_by('procedure_order')

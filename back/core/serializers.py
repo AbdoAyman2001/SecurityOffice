@@ -194,6 +194,39 @@ class CorrespondenceStatusLogSerializer(serializers.ModelSerializer):
 
 
 class CorrespondenceSerializer(serializers.ModelSerializer):
+    # Include full nested objects for read operations
+    type = CorrespondenceTypesSerializer(read_only=True)
+    contact = ContactsSerializer(read_only=True)
+    current_status = CorrespondenceTypeProcedureSerializer(read_only=True)
+    assigned_to = UserSerializer(read_only=True)
+    
+    # Foreign key fields for write operations (accept IDs)
+    type_id = serializers.PrimaryKeyRelatedField(
+        queryset=CorrespondenceTypes.objects.all(),
+        source='type',
+        write_only=True,
+        required=False
+    )
+    contact_id = serializers.PrimaryKeyRelatedField(
+        queryset=Contacts.objects.all(),
+        source='contact',
+        write_only=True,
+        required=False
+    )
+    current_status_id = serializers.PrimaryKeyRelatedField(
+        queryset=CorrespondenceTypeProcedure.objects.all(),
+        source='current_status',
+        write_only=True,
+        required=False
+    )
+    assigned_to_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        source='assigned_to',
+        write_only=True,
+        required=False
+    )
+    
+    # Keep flattened fields for backward compatibility
     type_name = serializers.CharField(source='type.type_name', read_only=True)
     current_status_name = serializers.CharField(source='current_status.procedure_name', read_only=True)
     assigned_to_username = serializers.CharField(source='assigned_to.username', read_only=True)
@@ -206,6 +239,20 @@ class CorrespondenceSerializer(serializers.ModelSerializer):
         model = Correspondence
         fields = '__all__'
         read_only_fields = ['correspondence_id', 'created_at', 'updated_at']
+    
+    def to_internal_value(self, data):
+        """Handle both ID-based and direct field updates"""
+        # Convert direct field names to ID-based fields for compatibility
+        if 'type' in data and not 'type_id' in data:
+            data['type_id'] = data.pop('type')
+        if 'contact' in data and not 'contact_id' in data:
+            data['contact_id'] = data.pop('contact')
+        if 'current_status' in data and not 'current_status_id' in data:
+            data['current_status_id'] = data.pop('current_status')
+        if 'assigned_to' in data and not 'assigned_to_id' in data:
+            data['assigned_to_id'] = data.pop('assigned_to')
+        
+        return super().to_internal_value(data)
 
 
 # ====================================== APPROVAL SERIALIZERS ======================================
@@ -320,7 +367,6 @@ class CorrespondenceSummarySerializer(serializers.ModelSerializer):
             'correspondence_id', 'reference_number', 'subject', 
             'direction', 'priority', 'correspondence_date', 'type_name'
         ]
-
 
 # ====================================== SETTINGS SERIALIZERS ======================================
 class SettingsSerializer(serializers.ModelSerializer):

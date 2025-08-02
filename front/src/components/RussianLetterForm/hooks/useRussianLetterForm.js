@@ -6,9 +6,9 @@ import {
   correspondenceTypeProceduresApi,
   contactsApi,
   attachmentsApi
-} from '../services/apiService';
-import { useAuth } from '../contexts/AuthContext';
-import { parseDRFError, parseAttachmentError } from '../utils/errorHandling';
+} from '../../../services/apiService';
+import { useAuth } from '../../../contexts/AuthContext';
+import { parseDRFError, parseAttachmentError } from '../../../utils/errorHandling';
 
 export const useRussianLetterForm = () => {
   const navigate = useNavigate();

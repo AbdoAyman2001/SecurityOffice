@@ -1,16 +1,28 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import (
-    PeopleHistoryViewSet, CompaniesHistoryViewSet, EmploymentHistoryViewSet,
-    FamilyRelationshipsViewSet, CorrespondenceTypesViewSet, ContactsViewSet,
 
-    PermitsViewSet, ApprovalDecisionsViewSet, AccidentsViewSet,
-    RelocationViewSet, RelocationPeriodViewSet, VehicleViewSet,
-    CarPermitViewSet, CardPermitsViewSet, CardPhotosViewSet, SettingsViewSet,
-    CorrespondenceTypeProcedureViewSet, CorrespondenceStatusLogViewSet, 
+# Import viewsets from domain-specific modules
+from .views import (
+    # People domain
+    PeopleHistoryViewSet, CompaniesHistoryViewSet, EmploymentHistoryViewSet,
+    FamilyRelationshipsViewSet,
+    
+    # Correspondence domain
+    CorrespondenceViewSet, CorrespondenceTypesViewSet, ContactsViewSet,
+    CorrespondenceTypeProcedureViewSet, CorrespondenceStatusLogViewSet,
+    
+    # Permits domain
+    PermitsViewSet, ApprovalDecisionsViewSet,
+    
+    # Other domains
+    AccidentsViewSet, RelocationViewSet, RelocationPeriodViewSet,
+    VehicleViewSet, CarPermitViewSet, CardPermitsViewSet, CardPhotosViewSet,
+    SettingsViewSet,
+    
+    # Utility functions
     parse_pdf_content, parse_filename, process_msg_file
 )
-from .viewsets import AttachmentsViewSet, CorrespondenceViewSet
+from .viewsets import AttachmentsViewSet
 from .auth_views import (
     LoginView, LogoutView, UserProfileView, ChangePasswordView,
     UserPermissionsView, UserManagementView, UserDetailView,

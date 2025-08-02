@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Box, Alert, Typography, Paper } from "@mui/material";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { useUniversalDataTable } from "../hooks/useUniversalDataTable";
+import { useUniversalDataTable } from "../components/DataTable/hooks/useUniversalDataTable";
 import { correspondenceApi } from "../services/apiService";
 import UniversalDataTable from "../components/DataTable/UniversalDataTable";
 import SearchFilterBar from "../components/DataTable/SearchFilterBar";

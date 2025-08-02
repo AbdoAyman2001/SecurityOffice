@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useState } from 'react';
-import { processFiles, analyzeAttachmentsAndAutoFill } from '../utils/fileUtils';
+import { processFiles, analyzeAttachmentsAndAutoFill } from '../../../utils/fileUtils';
 
 export const useDragAndDrop = (formData, setFormData, setDragActive,resetForm) => {
   

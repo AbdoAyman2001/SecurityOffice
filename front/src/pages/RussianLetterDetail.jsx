@@ -18,11 +18,13 @@ import {
 } from "@mui/icons-material";
 import { useAuth } from "../contexts/AuthContext";
 import { correspondenceApi } from "../services/apiService";
+import { useNotification } from "../components/CorrespondenceConfig/hooks/useNotification";
+import NotificationSnackbar from "../components/NotificationSnackbar";
 
 // Import refactored components
 import LetterBreadcrumbs from "../components/RussianLetterDetail/LetterBreadcrumbs";
 import LetterHeader from "../components/RussianLetterDetail/LetterHeader";
-import BasicInformation from "../components/RussianLetterDetail/BasicInformation";
+import BasicInformation from "../components/RussianLetterDetail/BasicInformation/BasicInformation";
 import DeleteConfirmDialog from "../components/RussianLetterDetail/DeleteConfirmDialog";
 import LoadingState from "../components/RussianLetterDetail/LoadingState";
 import RussianLetterEditModal from "../components/RussianLetterDetail/RussianLetterEditModal";
@@ -35,6 +37,17 @@ const RussianLetterDetail = () => {
   const navigate = useNavigate();
   const { isAuthenticated, canEditCorrespondence, canDeleteCorrespondence } =
     useAuth();
+  
+  // Notification system
+  const {
+    notification,
+    showNotification,
+    hideNotification,
+    showSuccess,
+    showError,
+    showWarning,
+    showInfo,
+  } = useNotification();
 
   // State management
   const [letter, setLetter] = useState(null);
@@ -50,6 +63,78 @@ const RussianLetterDetail = () => {
   const [contacts, setContacts] = useState([]);
   const [procedures, setProcedures] = useState([]);
   const [users, setUsers] = useState([]);
+
+  // Utility function to extract meaningful error messages from API responses
+  const extractErrorMessage = (error, fallbackMessage = "حدث خطأ غير متوقع.") => {
+    // Handle different error response structures
+    if (error?.response?.data) {
+      const data = error.response.data;
+      
+      // Handle field-specific errors (validation errors)
+      if (data.errors && typeof data.errors === 'object') {
+        const fieldErrors = Object.entries(data.errors)
+          .map(([field, messages]) => {
+            const messageArray = Array.isArray(messages) ? messages : [messages];
+            return `${field}: ${messageArray.join(', ')}`;
+          })
+          .join('; ');
+        return fieldErrors;
+      }
+      
+      // Handle general error messages
+      if (data.error) {
+        // Special handling for database constraint violations
+        if (data.error.includes('must make a unique set')) {
+          return "يوجد خطاب آخر بنفس رقم المرجع وتاريخ المراسلة. يرجى التحقق من البيانات.";
+        }
+        return data.error;
+      }
+      if (data.detail) {
+        // Special handling for database constraint violations
+        if (data.detail.includes('must make a unique set')) {
+          return "يوجد خطاب آخر بنفس رقم المرجع وتاريخ المراسلة. يرجى التحقق من البيانات.";
+        }
+        return data.detail;
+      }
+      if (data.message) return data.message;
+      
+      // Handle non_field_errors
+      if (data.non_field_errors && Array.isArray(data.non_field_errors)) {
+        const errors = data.non_field_errors.join('; ');
+        // Special handling for database constraint violations
+        if (errors.includes('must make a unique set')) {
+          return "يوجد خطاب آخر بنفس رقم المرجع وتاريخ المراسلة. يرجى التحقق من البيانات.";
+        }
+        return errors;
+      }
+      
+      // Handle direct string response
+      if (typeof data === 'string') {
+        // Special handling for database constraint violations
+        if (data.includes('must make a unique set')) {
+          return "يوجد خطاب آخر بنفس رقم المرجع وتاريخ المراسلة. يرجى التحقق من البيانات.";
+        }
+        return data;
+      }
+    }
+    
+    // Handle network errors
+    if (error?.message) {
+      if (error.message.includes('Network Error')) {
+        return "خطأ في الاتصال بالشبكة. يرجى التحقق من اتصال الإنترنت.";
+      }
+      if (error.message.includes('timeout')) {
+        return "انتهت مهلة الاتصال. يرجى المحاولة مرة أخرى.";
+      }
+      // Special handling for database constraint violations
+      if (error.message.includes('must make a unique set')) {
+        return "يوجد خطاب آخر بنفس رقم المرجع وتاريخ المراسلة. يرجى التحقق من البيانات.";
+      }
+      return error.message;
+    }
+    
+    return fallbackMessage;
+  };
 
   // Load letter data
   useEffect(() => {
@@ -78,10 +163,8 @@ const RussianLetterDetail = () => {
         setStatusHistory(data.status_history || []);
         setRelatedCorrespondence(data.related_correspondence || []);
         
-        // Filter correspondence types to only show Russian category
-        const allTypes = data.correspondence_types || [];
-        const russianTypes = allTypes.filter(type => type.category === 'Russian');
-        setCorrespondenceTypes(russianTypes);
+        // Set correspondence types (filtering will be handled in the hook)
+        setCorrespondenceTypes(data.correspondence_types || []);
         
         setContacts(data.contacts || []);
         setProcedures(data.procedures || []);
@@ -122,10 +205,8 @@ const RussianLetterDetail = () => {
         setStatusHistory(statusHistoryResponse.data || []);
         setRelatedCorrespondence(relatedData || []);
         
-        // Filter correspondence types to only show Russian category
-        const allTypes = typesResponse.data || [];
-        const russianTypes = allTypes.filter(type => type.category === 'Russian');
-        setCorrespondenceTypes(russianTypes);
+        // Set correspondence types (filtering will be handled in the hook)
+        setCorrespondenceTypes(typesResponse.data || []);
         
         setContacts(contactsResponse.data || []);
         
@@ -156,7 +237,15 @@ const RussianLetterDetail = () => {
       }
     } catch (err) {
       console.error("Error loading letter data:", err);
-      setError("حدث خطأ أثناء تحميل بيانات الخطاب. يرجى المحاولة مرة أخرى.");
+      
+      // Extract meaningful error message from API response
+      const errorMessage = extractErrorMessage(err, "حدث خطأ أثناء تحميل بيانات الخطاب. يرجى المحاولة مرة أخرى.");
+      
+      // Show error notification
+      showError(errorMessage);
+      
+      // Also set the error state for backward compatibility
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -165,7 +254,9 @@ const RussianLetterDetail = () => {
   // Event handlers
   const handleDelete = async () => {
     if (!canDeleteCorrespondence()) {
-      setError("ليس لديك الصلاحية لحذف الخطابات.");
+      const errorMessage = "ليس لديك الصلاحية لحذف الخطابات.";
+      showError(errorMessage);
+      setError(errorMessage);
       return;
     }
 
@@ -177,7 +268,15 @@ const RussianLetterDetail = () => {
       });
     } catch (err) {
       console.error("Error deleting letter:", err);
-      setError("حدث خطأ أثناء حذف الخطاب. يرجى المحاولة مرة أخرى.");
+      
+      // Extract meaningful error message from API response
+      const errorMessage = extractErrorMessage(err, "حدث خطأ أثناء حذف الخطاب. يرجى المحاولة مرة أخرى.");
+      
+      // Show error notification
+      showError(errorMessage);
+      
+      // Also set the error state for backward compatibility
+      setError(errorMessage);
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);
@@ -195,7 +294,15 @@ const RussianLetterDetail = () => {
       await correspondenceApi.downloadAttachment(attachmentId, fileName);
     } catch (err) {
       console.error("Error downloading attachment:", err);
-      setError("حدث خطأ أثناء تحميل المرفق.");
+      
+      // Extract meaningful error message from API response
+      const errorMessage = extractErrorMessage(err, "حدث خطأ أثناء تحميل المرفق.");
+      
+      // Show error notification
+      showError(errorMessage);
+      
+      // Also set the error state for backward compatibility
+      setError(errorMessage);
     }
   };
 
@@ -204,35 +311,63 @@ const RussianLetterDetail = () => {
       // Use the new updateField method for better performance
       const response = await correspondenceApi.updateField(id, fieldName, value);
       
-      // Update the letter state with the new data
-      setLetter(prevLetter => ({
-        ...prevLetter,
-        [fieldName]: value,
-        // Handle nested object updates
-        ...(fieldName === 'type' && {
-          type: correspondenceTypes.find(t => t.correspondence_type_id === value)
-        }),
-        ...(fieldName === 'contact' && {
-          contact: contacts.find(c => c.contact_id === value)
-        }),
-        ...(fieldName === 'assigned_to' && {
-          assigned_to: users.find(u => u.id === value)
-        })
-      }));
-      
-      // If type changed, reload procedures
-      if (fieldName === 'type') {
-        try {
-          const proceduresResponse = await correspondenceApi.getTypeProcedures(value);
-          setProcedures(proceduresResponse.data || []);
-        } catch (procError) {
-          console.warn('Failed to reload procedures:', procError);
+      // Use the complete updated letter data from the backend response
+      if (response.data) {
+        console.log('Updated letter data from backend:', response.data);
+        setLetter(response.data);
+        
+        // If type changed, use the available_procedures from the response
+        if (fieldName === 'type' && response.data.type) {
+          // Check if backend provided available_procedures in the response
+          if (response.data.available_procedures) {
+            const newProcedures = response.data.available_procedures;
+            setProcedures(newProcedures);
+            console.log('Updated procedures from backend response:', newProcedures.length);
+            
+            // Show notification about type change
+            const typeName = response.data.type.type_name || 'نوع جديد';
+            const procedureCount = newProcedures.length;
+            if (procedureCount > 0) {
+              showNotification(`تم تغيير نوع الخطاب إلى "${typeName}" مع ${procedureCount} حالة متاحة`, 'success');
+            } else {
+              showNotification(`تم تغيير نوع الخطاب إلى "${typeName}" - لا توجد حالات متاحة لهذا النوع`, 'info');
+            }
+          } else {
+            // Fallback: fetch procedures separately if not included in response
+            console.log('Backend did not provide available_procedures, fetching separately');
+            try {
+              const typeId = response.data.type.correspondence_type_id || response.data.type.id;
+              const proceduresResponse = await correspondenceApi.getTypeProcedures(typeId);
+              const newProcedures = proceduresResponse.data || [];
+              setProcedures(newProcedures);
+              console.log('Fallback: Reloaded procedures for new type:', newProcedures.length);
+            } catch (procError) {
+              console.warn('Failed to reload procedures:', procError);
+              setProcedures([]); // Clear procedures on error
+            }
+          }
         }
+      } else {
+        console.warn('No data in response, falling back to manual update');
+        // Fallback: manual update if backend doesn't return full data
+        setLetter(prevLetter => ({
+          ...prevLetter,
+          [fieldName]: value
+        }));
       }
       
     } catch (err) {
       console.error("Error updating field:", err);
-      setError("حدث خطأ أثناء تحديث البيانات.");
+      
+      // Extract meaningful error message from API response
+      const errorMessage = extractErrorMessage(err);
+      
+      // Show error notification with detailed message
+      showError(errorMessage);
+      
+      // Also set the error state for backward compatibility
+      setError(errorMessage);
+      
       throw err; // Re-throw to let the component handle the error
     }
   };
@@ -273,10 +408,9 @@ const RussianLetterDetail = () => {
 
   const getStatusColor = () => "info";
 
-  // Show loading/error states
-  const loadingOrError = loading || error;
-  if (loadingOrError) {
-    return <LoadingState loading={loading} error={error} />;
+  // Show loading state only when actually loading
+  if (loading) {
+    return <LoadingState loading={loading} error={null} />;
   }
 
   // Show not found state
@@ -322,6 +456,7 @@ const RussianLetterDetail = () => {
             correspondenceTypes={correspondenceTypes}
             contacts={contacts}
             users={users}
+            procedures={procedures}
           />
 
           {/* Attachments */}
@@ -388,6 +523,12 @@ const RussianLetterDetail = () => {
         onClose={() => setStatusHistoryModalOpen(false)}
         statusHistory={statusHistory}
         letterTitle={letter.subject || "بدون موضوع"}
+      />
+      
+      {/* Notification Snackbar */}
+      <NotificationSnackbar
+        notification={notification}
+        onClose={hideNotification}
       />
     </Box>
   );

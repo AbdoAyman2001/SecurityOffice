@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import {
   correspondenceTypesApi,
   correspondenceTypeProceduresApi,
-} from '../services/apiService';
-import { parseDRFError } from '../utils/errorHandling';
+} from '../../../services/apiService';
+import { parseDRFError } from '../../../utils/errorHandling';
 import { useNotification } from './useNotification';
 
 /**

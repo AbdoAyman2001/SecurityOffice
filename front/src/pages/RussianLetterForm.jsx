@@ -10,8 +10,8 @@ import {
 import {
   Mail as MailIcon
 } from '@mui/icons-material';
-import { useRussianLetterForm } from '../hooks/useRussianLetterForm';
-import { useDragAndDrop } from '../hooks/useDragAndDrop';
+import { useRussianLetterForm } from "../components/RussianLetterForm/hooks/useRussianLetterForm";
+import { useDragAndDrop } from '../components/RussianLetterForm/hooks/useDragAndDrop';
 import { MESSAGES } from '../constants/russianLetterForm';
 import BasicFormFields from '../components/RussianLetterForm/BasicFormFields';
 import ParentCorrespondenceField from '../components/RussianLetterForm/ParentCorrespondenceField';

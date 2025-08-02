@@ -8,8 +8,8 @@ import {
   Alert,
 } from "@mui/material";
 import { useAuth } from "../contexts/AuthContext";
-import { useCorrespondenceConfig } from "../hooks/useCorrespondenceConfig";
-import { useNotification } from "../hooks/useNotification";
+import { useCorrespondenceConfig } from "../components/CorrespondenceConfig/hooks/useCorrespondenceConfig";
+import { useNotification } from "../components/CorrespondenceConfig/hooks/useNotification";
 import CorrespondenceTypesTab from "../components/CorrespondenceConfig/CorrespondenceTypesTab";
 import ProceduresTab from "../components/CorrespondenceConfig/ProceduresTab";
 import TypeDialog from "../components/CorrespondenceConfig/TypeDialog";
